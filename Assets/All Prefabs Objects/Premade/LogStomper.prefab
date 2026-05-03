@@ -632,6 +632,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Log
       objectReference: {fileID: 0}
+    - target: {fileID: 1228532401791740433, guid: 2d47dc30183a8b042935402d6be6173f, type: 3}
+      propertyPath: m_TagString
+      value: Splat
+      objectReference: {fileID: 0}
     - target: {fileID: 1893569138222887083, guid: 2d47dc30183a8b042935402d6be6173f, type: 3}
       propertyPath: m_LocalScale.x
       value: 1200
@@ -694,6 +698,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1228532401791740433, guid: 2d47dc30183a8b042935402d6be6173f, type: 3}
       insertIndex: -1
       addedObject: {fileID: 156270098730173062}
+    - targetCorrespondingSourceObject: {fileID: 1228532401791740433, guid: 2d47dc30183a8b042935402d6be6173f, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4064596439285038273}
   m_SourcePrefab: {fileID: 100100000, guid: 2d47dc30183a8b042935402d6be6173f, type: 3}
 --- !u!4 &7203502638973910273 stripped
 Transform:
@@ -715,7 +722,7 @@ AudioSource:
   m_Enabled: 0
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 3a8645896ea9f034aadbca1259bbf1a7, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 3a8645896ea9f034aadbca1259bbf1a7, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -802,3 +809,24 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!65 &4064596439285038273
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7546955279662884795}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.009996588, y: 0.0084435325, z: 0.007784252}
+  m_Center: {x: -0.00000084238064, y: -0.0000039876923, z: -0.000014141904}
