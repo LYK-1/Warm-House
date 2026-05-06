@@ -18,6 +18,9 @@ public class AIKartControl : MonoBehaviour
         m_agent.SetDestination(AIWaypoints[m_currentwaypoint].position);
         CheckDistanceToNextTarget();
         Rotatewheels();
+        if (GetComponent<ObstacleSound>().AIisHit == false){
+            ChangeSpeed();
+        }
     }
 
     private void CheckDistanceToNextTarget(){
@@ -39,7 +42,29 @@ public class AIKartControl : MonoBehaviour
     }
 
     private IEnumerator SetCheckDistance(){
-        yield return new WaitForSeconds(0.1f);
+        yield return new WaitForSeconds(1.0f);
         m_checkDistance = true;
+    }
+
+    private void ChangeSpeed()
+    {
+        if (m_agent.speed < MaxSpeed)
+        {
+            float currentSpeed = 0;
+            if (currentSpeed < MaxSpeed)
+            {
+                currentSpeed = m_agent.speed += 10 * Time.deltaTime;
+                m_agent.speed = currentSpeed;
+            }
+        }
+        else if (m_agent.speed > MaxSpeed)
+        {
+            float currentSpeed = 10000;
+            if (currentSpeed > MaxSpeed)
+            {
+                currentSpeed = m_agent.speed -= 10 * Time.deltaTime;
+                m_agent.speed = currentSpeed;
+            }
+        }
     }
 }

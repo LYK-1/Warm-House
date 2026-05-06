@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
@@ -21,13 +22,40 @@ public class ObstacleSound : MonoBehaviour
     private bool AIRotating;
     public AudioClip SpinSound;
     private bool m_spinPlayed;
+    private bool m_isMissileHit;
 
+    public bool AIisHit;
+    public bool HitByBoxingGlove;
+
+    private bool m_oilSound;
     void Start()
     {
         m_rigidbody = GetComponent<Rigidbody>();
         if(!IsPlayer){
             m_agent = GetComponent<NavMeshAgent>();
         }
+    }
+
+    public void TriggerBurn()
+    {
+        if (m_hasBurned)
+        {
+            return;
+        }
+
+        m_hasBurned = true;
+
+        if (BurnSmoke != null)
+        {
+            BurnSmoke.SetActive(true);
+        }
+
+        if (EngineRunning != null)
+        {
+            EngineRunning.SetActive(false);
+        }
+
+        StartCoroutine(StopTheKart());
     }
 
     private void Update()
@@ -37,7 +65,19 @@ public class ObstacleSound : MonoBehaviour
             transform.Rotate(0, 25, 0);
             StartCoroutine(StopRotating());
         }
-    }
+        if (HitByBoxingGlove)
+        {
+            if (IsPlayer)
+            {
+                transform.Rotate(0, 1.5f, 0);
+            }
+            if (!IsPlayer)
+            {
+                transform.Rotate(0, 25, 0);
+                StartCoroutine(StopRotating());
+            }
+        }
+    }      
 
     private void OnTriggerEnter(Collider collision){
         if (collision.gameObject.CompareTag("Obstacle")){
@@ -59,19 +99,65 @@ public class ObstacleSound : MonoBehaviour
                     m_audioSource.Play();
                     m_hasHit = true;
                     transform.localScale=new Vector3(2.5f,0.3f,1.8f);
-                    m_rigidbody.isKinematic = true;
-                    m_hasPlayed = true;
+                    if (IsPlayer)
+                    {
+                        m_rigidbody.isKinematic = true;
+                        if (!IsPlayer)
+                        {
+                            AIisHit = true;
+                            m_agent.speed = 0;
+                            m_hasPlayed = true;
+                        }
+                    }
                 }
             }
         }
 
         if (collision.gameObject.CompareTag("Player1"))
         {
+            AIisHit = true;
             m_agent.speed = 5.5f;
             AIRotating = true;
         }
         if (collision.gameObject.CompareTag("AI1") || collision.gameObject.CompareTag("AI2") || collision.gameObject.CompareTag("AI3")){
             StartCoroutine(PlayerReact());
+        }
+
+        if (collision.gameObject.CompareTag("Missile"))
+        {
+            if (!m_isMissileHit)
+            {
+                StartCoroutine(MissileHit());
+            }
+        }
+
+        if (collision.gameObject.CompareTag("Burn"))
+        {
+            TriggerBurn();
+        }
+    }
+
+    private void OnTriggerStay(Collider collision)
+    {
+        if (collision.gameObject.CompareTag("Oil"))
+        {
+            if (IsPlayer && collision != null)
+            {
+                transform.Rotate(0, 1.5f, 0);
+            }
+            if (!m_audioSource.isPlaying && !m_oilSound)
+            {
+                m_audioSource.clip = Splat;
+                m_audioSource.Play();
+                m_oilSound = true;
+            }
+            if (!IsPlayer && collision != null)
+            {
+                AIisHit = true;
+                m_agent.speed = 0;
+                transform.Rotate(0, 25, 0);
+                StartCoroutine(StopRotating());
+            }
         }
     }
 
@@ -87,12 +173,9 @@ public class ObstacleSound : MonoBehaviour
                 StartCoroutine(ResetKart());
             }
         }
-        if (collision.gameObject.CompareTag("Burn")){
-            if (!m_hasBurned){
-                m_hasBurned = true;
-                StartCoroutine(StopTheKart());
-                BurnSmoke.SetActive(true);
-            }
+        if (collision.gameObject.CompareTag("Oil"))
+        {
+            m_oilSound = false;
         }
     }
 
@@ -103,6 +186,7 @@ public class ObstacleSound : MonoBehaviour
             m_rigidbody.isKinematic = false;
         }
         if (!IsPlayer){
+            AIisHit = false;
             m_agent.speed =25;
         }
         m_rigidbody.isKinematic = false;
@@ -115,38 +199,46 @@ public class ObstacleSound : MonoBehaviour
 
     private IEnumerator StopTheKart(){
         yield return new WaitForSeconds(0.2f);
-        m_hasBurned = true;
         yield return new WaitForSeconds(3);
-        EngineRunning.SetActive(false);
-        BurnSmoke.SetActive(false);
-        m_hasBurned =false;
         if (IsPlayer){
             m_rigidbody.isKinematic = true;
         }
         if (!IsPlayer){
+            AIisHit = true;
             m_agent.speed =0;
-        }           
+        }
         m_rigidbody.isKinematic =true;
         Vector3 kartPosition = new Vector3(transform.position.x, transform.position.y + 1,transform.position.z);
         Instantiate(Explosion,kartPosition,Quaternion.identity);
-        if (!m_audioSource.isPlaying){
+        if (BurnSmoke != null)
+        {
+            BurnSmoke.SetActive(false);
+        }
+        if (m_audioSource != null && !m_audioSource.isPlaying){
             m_audioSource.clip = ExplodeSound;
             m_audioSource.Play();
         }
         transform.localScale =new Vector3(0,0,0);
         yield return new WaitForSeconds(2);
         transform.localScale=new Vector3(1,1,1);
-        EngineRunning.SetActive(true);
+        if (EngineRunning != null)
+        {
+            EngineRunning.SetActive(true);
+        }
         if (IsPlayer){
             m_rigidbody.isKinematic = false;
         }
         if (!IsPlayer){
+            AIisHit = false;
             m_agent.speed =25;
         }
         m_rigidbody.isKinematic = false;
-        if (!m_audioSource.isPlaying)
-        m_audioSource.clip= Return;
-        m_audioSource.Play();
+        if (m_audioSource != null)
+        {
+            m_audioSource.clip = Return;
+            m_audioSource.Play();
+        }
+        m_hasBurned = false;
     }
 
     IEnumerator StopRotating()
@@ -158,8 +250,10 @@ public class ObstacleSound : MonoBehaviour
             m_spinPlayed = true;
             yield return new WaitForSeconds(3);
             AIRotating = false;
-            m_agent.speed = 10;
+            m_agent.speed = 20;
+            AIisHit = false;
             m_spinPlayed = false;
+            HitByBoxingGlove = false;
         }
     }
 
@@ -169,4 +263,51 @@ public class ObstacleSound : MonoBehaviour
         yield return new WaitForSeconds(1);
         m_rigidbody.constraints = RigidbodyConstraints.None;
     }
+
+    IEnumerator MissileHit()
+    {
+        m_isMissileHit = true;
+
+        EngineRunning.SetActive(false);
+
+        if (m_audioSource != null)
+        {
+            m_audioSource.clip = ExplodeSound;
+            m_audioSource.Play();
+        }
+
+        transform.localScale = new Vector3(2.5f, 0.3f, 1.8f);
+        if (IsPlayer)
+        {
+            m_rigidbody.isKinematic = true;
+        }
+        else
+        {
+            AIisHit = true;
+            m_agent.speed = 0;
+        }
+
+        yield return new WaitForSeconds(2);
+
+        transform.localScale = new Vector3(1, 1, 1);
+        EngineRunning.SetActive(true);
+        if (IsPlayer)
+        {
+            m_rigidbody.isKinematic = false;
+        }
+        else
+        {
+            AIisHit = false;
+            m_agent.speed = 25;
+        }
+
+        if (m_audioSource != null)
+        {
+            m_audioSource.clip = Return;
+            m_audioSource.Play();
+        }
+
+        m_isMissileHit = false;
+    }
+
 }

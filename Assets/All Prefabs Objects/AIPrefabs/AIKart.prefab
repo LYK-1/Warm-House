@@ -32,6 +32,37 @@ Transform:
   - {fileID: 5915434335923751448}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 90.74, z: 0}
+--- !u!1 &4627267893239042225
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6417504944836227107}
+  m_Layer: 0
+  m_Name: SpawnPoint_Oil
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6417504944836227107
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4627267893239042225}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.7071068, y: 0, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: -0, y: 0.1, z: -3.45}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5915434335923751448}
+  m_LocalEulerAnglesHint: {x: -90, y: 0, z: 0}
 --- !u!1 &5491566742428413465
 GameObject:
   m_ObjectHideFlags: 0
@@ -4598,6 +4629,37 @@ ParticleSystemRenderer:
   m_MeshWeighting2: 1
   m_MeshWeighting3: 1
   m_MaskInteraction: 0
+--- !u!1 &6725495942458374907
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4296099050319760468}
+  m_Layer: 0
+  m_Name: SpawnPoint _Bomb
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4296099050319760468
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6725495942458374907}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.7071068, y: 0, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 0, y: 0.6, z: -2}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5915434335923751448}
+  m_LocalEulerAnglesHint: {x: -90, y: 0, z: 0}
 --- !u!1001 &2693542543553951878
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5125,7 +5187,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6985673282529341610, guid: 2a9f149ad24390d479e6be0c265c20e1, type: 3}
       propertyPath: m_TagString
-      value: Untagged
+      value: AI1
       objectReference: {fileID: 0}
     - target: {fileID: 7009181790864639537, guid: 2a9f149ad24390d479e6be0c265c20e1, type: 3}
       propertyPath: m_RenderingLayerMask
@@ -5169,7 +5231,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8714293339291707174, guid: 2a9f149ad24390d479e6be0c265c20e1, type: 3}
       propertyPath: m_TagString
-      value: Untagged
+      value: AI1
       objectReference: {fileID: 0}
     - target: {fileID: 8796342875801609170, guid: 2a9f149ad24390d479e6be0c265c20e1, type: 3}
       propertyPath: m_Layer
@@ -5201,6 +5263,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3581264917933150887, guid: 2a9f149ad24390d479e6be0c265c20e1, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2516346509143973741}
+    - targetCorrespondingSourceObject: {fileID: 3581264917933150887, guid: 2a9f149ad24390d479e6be0c265c20e1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6417504944836227107}
+    - targetCorrespondingSourceObject: {fileID: 3581264917933150887, guid: 2a9f149ad24390d479e6be0c265c20e1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4296099050319760468}
     - targetCorrespondingSourceObject: {fileID: 3254465394061667329, guid: 2a9f149ad24390d479e6be0c265c20e1, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3614900194985948528}
@@ -5223,6 +5291,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8714293339291707174, guid: 2a9f149ad24390d479e6be0c265c20e1, type: 3}
       insertIndex: -1
       addedObject: {fileID: 950676081541323415}
+    - targetCorrespondingSourceObject: {fileID: 8714293339291707174, guid: 2a9f149ad24390d479e6be0c265c20e1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 140401655024915552}
     - targetCorrespondingSourceObject: {fileID: 6985673282529341610, guid: 2a9f149ad24390d479e6be0c265c20e1, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1596827494704592640}
@@ -5384,6 +5455,9 @@ MonoBehaviour:
   EngineRunning: {fileID: 2988119249415844693}
   ExplodeSound: {fileID: 8300000, guid: c853d3c9bef384e8d84dd8d5fef5a2ba, type: 3}
   IsPlayer: 0
+  SpinSound: {fileID: 8300000, guid: 8a23239be9de14838884a763327af51e, type: 3}
+  AIisHit: 0
+  HitByBoxingGlove: 0
 --- !u!195 &3057541772684756457
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -5394,7 +5468,7 @@ NavMeshAgent:
   m_Enabled: 1
   m_AgentTypeID: 0
   m_Radius: 2
-  m_Speed: 25
+  m_Speed: 0
   m_Acceleration: 16
   avoidancePriority: 50
   m_AngularSpeed: 12000
@@ -5427,6 +5501,7 @@ MonoBehaviour:
   - {fileID: 5223114641638868732}
   - {fileID: 3343505468854446293}
   - {fileID: 2291680124297762116}
+  MaxSpeed: 15
 --- !u!114 &5633036379525886172
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5471,6 +5546,22 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!114 &140401655024915552
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1966822648400052121}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f690108b84475c74f963fd355c9e527a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Bomb: {fileID: 9192102511406774403, guid: 8ff46b4acc41b284aa4eeb47be6a38b0, type: 3}
+  BombSpawnPoint: {fileID: 4296099050319760468}
+  OilSpill: {fileID: 4936315118794865332, guid: 3394db7d37d62a748934fca3cc172c86, type: 3}
+  OilSpawnPoint: {fileID: 6417504944836227107}
 --- !u!1 &2291680124297762116 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 8964770983840599547, guid: 2a9f149ad24390d479e6be0c265c20e1, type: 3}

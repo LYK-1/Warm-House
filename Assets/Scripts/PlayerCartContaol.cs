@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -49,8 +49,8 @@ public class PlayerCartContaol : MonoBehaviour
     private float m_lastHazardContactTime = -999f;
 
     [Header("Reset")]
-    [SerializeField] private float SafePoseRecordInterval = 0.75f;
-    [SerializeField] private float SafePoseMinDistance = 8f;
+    [SerializeField] private float SafePoseRecordInterval = 0.25f;
+    [SerializeField] private float SafePoseMinDistance = 3f;
     [SerializeField] private int SafePoseHistoryLimit = 12;
     [SerializeField] private float SafePoseMinUprightDot = 0.9f;
     [SerializeField] private float SafePoseRecentHazardCooldown = 1f;
@@ -60,12 +60,17 @@ public class PlayerCartContaol : MonoBehaviour
     [SerializeField] private float RespawnVehicleCheckHeight = 1.2f;
     [SerializeField] private float RespawnVehicleCheckRadius = 1.0f;
     [SerializeField] private float RespawnMinGroundNormalDot = 0.65f;
+    [SerializeField] private float RespawnMinDistanceFromCurrent = 4f;
 
     private readonly List<RespawnPose> m_safeRespawnHistory = new List<RespawnPose>();
     private Vector3 m_lastSafePosePosition;
     private Quaternion m_lastSafePoseRotation;
     private float m_lastSafePoseRecordTime;
     private RespawnPose m_spawnPose;
+
+    public GameObject ForwardCamera;
+    public GameObject ReverseCamera;
+    private bool m_camReverse;
 
     void Start()
     {
@@ -80,6 +85,7 @@ public class PlayerCartContaol : MonoBehaviour
             m_gearNumber++;
             m_driveTorqueGear[i] = DriveTorque + (MaxSpeed / 10f * m_gearNumber);
         }
+        ReverseCamera.SetActive(false);
     }
 
     void FixedUpdate()
@@ -91,7 +97,6 @@ public class PlayerCartContaol : MonoBehaviour
 
         Drive(m_gas, m_brake, m_steering, m_drift);
         AddDownForce();
-        TrackSafeRespawnPose();
     }
 
     void Update()
@@ -297,14 +302,27 @@ public class PlayerCartContaol : MonoBehaviour
 
     public void OnReset(InputValue button)
     {
-        if (!button.isPressed)
+        if (!button.isPressed || isResetting)
         {
             return;
         }
 
-        if (Vector3.Dot(transform.up, Vector3.up) < 0.5f)
+        StartCoroutine(ResetCar());
+    }
+
+    public void OnCameraChange(InputValue button)
+    {
+        if (m_camReverse)
         {
-            StartCoroutine(ResetCar());
+            m_camReverse = false;
+            ForwardCamera.SetActive(true);
+            ReverseCamera.SetActive(false);
+        }
+        else if (!m_camReverse)
+        {
+            m_camReverse = true;
+            ForwardCamera.SetActive(false);
+            ReverseCamera.SetActive(true);
         }
     }
 
@@ -343,9 +361,26 @@ public class PlayerCartContaol : MonoBehaviour
         m_Rigidbody.linearVelocity = Vector3.zero;
         m_Rigidbody.angularVelocity = Vector3.zero;
 
-        RecordSafePose(CreateRespawnPose(transform.position, transform.rotation), true);
         m_brake = 0f;
         isResetting = false;
+    }
+
+    public void RegisterProgressRespawnPoint(Transform progressPoint)
+    {
+        if (progressPoint == null)
+        {
+            return;
+        }
+
+        RespawnPose progressPose = CreateRespawnPose(progressPoint.position, transform.rotation);
+        RespawnPose groundedPose;
+        if (TryProjectRespawnToGround(progressPose, out groundedPose) && !IsRespawnPoseBlocked(groundedPose.Position))
+        {
+            RecordSafePose(groundedPose, false);
+            return;
+        }
+
+        RecordSafePose(new RespawnPose(progressPoint.position + Vector3.up * RespawnGroundLift, progressPose.Rotation), false);
     }
 
     public void SetGears()
@@ -473,17 +508,17 @@ public class PlayerCartContaol : MonoBehaviour
             message += $" point={contact.point} normal={contact.normal}";
         }
 
-        Debug.Log(message, collision.collider != null ? collision.collider.gameObject : gameObject);
+        //Debug.Log(message, collision.collider != null ? collision.collider.gameObject : gameObject);
     }
 
     private void LogTrigger(string eventName, Collider other)
     {
-        Vector3 closestPoint = other.ClosestPoint(transform.position);
-        string message =
-            $"[CollisionDebug][{name}] {eventName} other={DescribeCollider(other)} " +
-            $"playerPosition={transform.position} closestPoint={closestPoint}";
+        //Vector3 closestPoint = other.ClosestPoint(transform.position);
+        //string message =
+        //    $"[CollisionDebug][{name}] {eventName} other={DescribeCollider(other)} " +
+        //    $"playerPosition={transform.position} closestPoint={closestPoint}";
 
-        Debug.Log(message, other.gameObject);
+        //Debug.Log(message, other.gameObject);
     }
 
     private void MarkHazardContact(Collider other)
@@ -572,8 +607,20 @@ public class PlayerCartContaol : MonoBehaviour
         m_lastSafePoseRotation = pose.Rotation;
     }
 
+    private bool IsRespawnPoseTooCloseToCurrent(RespawnPose pose, Vector3 currentPosition)
+    {
+        if (RespawnMinDistanceFromCurrent <= 0f)
+        {
+            return false;
+        }
+
+        float minDistanceSqr = RespawnMinDistanceFromCurrent * RespawnMinDistanceFromCurrent;
+        return (pose.Position - currentPosition).sqrMagnitude < minDistanceSqr;
+    }
+
     private bool TryGetSafeRespawnPose(out RespawnPose pose)
     {
+        Vector3 currentPosition = m_Rigidbody != null ? m_Rigidbody.position : transform.position;
         for (int i = m_safeRespawnHistory.Count - 1; i >= 0; i--)
         {
             RespawnPose groundedPose;
@@ -583,6 +630,11 @@ public class PlayerCartContaol : MonoBehaviour
             }
 
             if (IsRespawnPoseBlocked(groundedPose.Position))
+            {
+                continue;
+            }
+
+            if (IsRespawnPoseTooCloseToCurrent(groundedPose, currentPosition))
             {
                 continue;
             }
@@ -721,3 +773,4 @@ public class PlayerCartContaol : MonoBehaviour
         }
     }
 }
+

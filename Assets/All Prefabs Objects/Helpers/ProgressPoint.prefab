@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8619380558174613280}
   - component: {fileID: 3038244990748935794}
+  - component: {fileID: -4986217724446884452}
   m_Layer: 0
   m_Name: ProgressPoint
   m_TagString: Untagged
@@ -53,3 +54,17 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &-4986217724446884452
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7506399141789845705}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eca60c67d82262d4caddad1d4bec71b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  AISpeedControl: 0
+  AISetSpeed: 0

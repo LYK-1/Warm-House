@@ -15,6 +15,11 @@ TagManager:
   - AI1
   - AI2
   - AI3
+  - Glove
+  - Missile
+  - Player2
+  - Player3
+  - Player4
   layers:
   - Default
   - TransparentFX
