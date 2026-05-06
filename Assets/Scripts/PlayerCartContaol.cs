@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -72,10 +73,17 @@ public class PlayerCartContaol : MonoBehaviour
     public GameObject ReverseCamera;
     private bool m_camReverse;
 
+    public Text PositionDisplay;
+    private bool m_changeDirection;
+    public Text LapDisplay;
+    private int m_participantIndex = -1;
+
     void Start()
     {
         m_Rigidbody = GetComponent<Rigidbody>();
         m_Rigidbody.centerOfMass = new Vector3(0f, -0.5f, 0f);
+        m_participantIndex = ResolveParticipantIndex(transform);
+        RegisterParticipantState();
 
         m_spawnPose = CreateRespawnPose(transform.position, transform.rotation);
         RecordSafePose(m_spawnPose, true);
@@ -86,6 +94,12 @@ public class PlayerCartContaol : MonoBehaviour
             m_driveTorqueGear[i] = DriveTorque + (MaxSpeed / 10f * m_gearNumber);
         }
         ReverseCamera.SetActive(false);
+        ConfigureLeaderboardDisplay();
+
+        InvokeRepeating("DisplayPosition", 0.2f, 0.2f);
+        InvokeRepeating("DisplayLap", 0.2f, 0.2f);
+        DisplayPosition();
+        DisplayLap();
     }
 
     void FixedUpdate()
@@ -97,6 +111,7 @@ public class PlayerCartContaol : MonoBehaviour
 
         Drive(m_gas, m_brake, m_steering, m_drift);
         AddDownForce();
+        TrackSafeRespawnPose();
     }
 
     void Update()
@@ -291,10 +306,21 @@ public class PlayerCartContaol : MonoBehaviour
 
     public void OnReverse(InputValue button)
     {
-        m_reverse = !m_reverse;
-        GetComponent<KartSounds>().IsReversing = m_reverse;
+        if (m_reverse)
+        {
+            m_reverse = false;
+            GetComponent<KartSounds>().IsReversing = false;
+            if (m_Rigidbody.isKinematic)
+            {
+                StartCoroutine(ResetChangeDirection());
+            }
+        }
+        else
+        {
+            m_reverse = true;
+            GetComponent<KartSounds>().IsReversing = true;
+        }
     }
-
     public void OnSteering(InputValue value)
     {
         m_steering = value.Get<Vector2>();
@@ -341,6 +367,20 @@ public class PlayerCartContaol : MonoBehaviour
         m_Rigidbody.angularVelocity = Vector3.zero;
         m_Rigidbody.isKinematic = true;
 
+        m_reverse = false;
+        m_changeDirection = false;
+        m_camReverse = false;
+        KartSounds kartSounds = GetComponent<KartSounds>();
+        if (kartSounds != null)
+        {
+            kartSounds.IsReversing = false;
+        }
+        if (ForwardCamera != null && ReverseCamera != null)
+        {
+            ForwardCamera.SetActive(true);
+            ReverseCamera.SetActive(false);
+        }
+
         m_gas = 0f;
         m_brake = 1f;
         m_steering = Vector2.zero;
@@ -352,8 +392,23 @@ public class PlayerCartContaol : MonoBehaviour
             respawnPose = new RespawnPose(m_spawnPose.Position + Vector3.up * RespawnGroundLift, m_spawnPose.Rotation);
         }
 
+        int checkpointNumber = respawnPose.CheckpointNumber;
+        if (checkpointNumber <= 0)
+        {
+            checkpointNumber = GetCurrentCheckpointNumber();
+        }
+
+        Quaternion respawnRotation = ResolveCheckpointForwardRotation(checkpointNumber, respawnPose.Rotation);
+        respawnPose = new RespawnPose(respawnPose.Position, respawnRotation, checkpointNumber);
+
         transform.SetPositionAndRotation(respawnPose.Position, respawnPose.Rotation);
         Physics.SyncTransforms();
+
+        int participantIndex = GetParticipantIndex();
+        if (participantIndex >= 0 && participantIndex < SaveProgress.CurrentCheckpoint.Length)
+        {
+            SaveProgress.CurrentCheckpoint[participantIndex] = Mathf.Max(0, checkpointNumber);
+        }
 
         yield return new WaitForSeconds(0.2f);
 
@@ -372,7 +427,15 @@ public class PlayerCartContaol : MonoBehaviour
             return;
         }
 
-        RespawnPose progressPose = CreateRespawnPose(progressPoint.position, transform.rotation);
+        int checkpointNumber = 0;
+        ProgressPoints progressPointComponent = progressPoint.GetComponent<ProgressPoints>();
+        if (progressPointComponent != null)
+        {
+            checkpointNumber = Mathf.Max(0, progressPointComponent.ProgressNumber);
+        }
+
+        Quaternion respawnRotation = ResolveTrackRespawnRotation(progressPoint);
+        RespawnPose progressPose = new RespawnPose(progressPoint.position, respawnRotation, checkpointNumber);
         RespawnPose groundedPose;
         if (TryProjectRespawnToGround(progressPose, out groundedPose) && !IsRespawnPoseBlocked(groundedPose.Position))
         {
@@ -380,7 +443,131 @@ public class PlayerCartContaol : MonoBehaviour
             return;
         }
 
-        RecordSafePose(new RespawnPose(progressPoint.position + Vector3.up * RespawnGroundLift, progressPose.Rotation), false);
+        RecordSafePose(new RespawnPose(progressPoint.position + Vector3.up * RespawnGroundLift, progressPose.Rotation, checkpointNumber), false);
+    }
+
+    private int ResolveNearestCheckpointIndex(Vector3 position)
+    {
+        SaveProgress saveProgress = SaveProgress.Instance;
+        if (saveProgress == null || saveProgress.ProgressPointsItems == null || saveProgress.ProgressPointsItems.Length == 0)
+        {
+            return -1;
+        }
+
+        int nearestIndex = -1;
+        float nearestDistanceSqr = float.MaxValue;
+
+        for (int i = 0; i < saveProgress.ProgressPointsItems.Length; i++)
+        {
+            GameObject pointObject = saveProgress.ProgressPointsItems[i];
+            if (pointObject == null)
+            {
+                continue;
+            }
+
+            float distanceSqr = (pointObject.transform.position - position).sqrMagnitude;
+            if (distanceSqr < nearestDistanceSqr)
+            {
+                nearestDistanceSqr = distanceSqr;
+                nearestIndex = i;
+            }
+        }
+
+        return nearestIndex;
+    }
+
+    private Quaternion ResolveCheckpointForwardRotation(int checkpointNumber, Quaternion fallbackRotation)
+    {
+        SaveProgress saveProgress = SaveProgress.Instance;
+        if (saveProgress == null || saveProgress.ProgressPointsItems == null || saveProgress.ProgressPointsItems.Length < 2)
+        {
+            return fallbackRotation;
+        }
+
+        int effectiveCheckpointNumber = checkpointNumber <= 0 ? 1 : checkpointNumber;
+        int currentIndex = effectiveCheckpointNumber - 1;
+        if (currentIndex < 0 || currentIndex >= saveProgress.ProgressPointsItems.Length)
+        {
+            return fallbackRotation;
+        }
+
+        ProgressPoints currentPoint = GetProgressPoint(currentIndex);
+        ProgressPoints nextPoint = GetProgressPoint((currentIndex + 1) % saveProgress.ProgressPointsItems.Length);
+        if (currentPoint == null || nextPoint == null)
+        {
+            return fallbackRotation;
+        }
+
+        Vector3 direction = nextPoint.transform.position - currentPoint.transform.position;
+        direction.y = 0f;
+        if (direction.sqrMagnitude <= 0.0001f)
+        {
+            return fallbackRotation;
+        }
+
+        return Quaternion.LookRotation(direction.normalized, Vector3.up);
+    }
+
+    private Quaternion ResolveTrackRespawnRotation(Transform progressPoint)
+    {
+        if (progressPoint != null)
+        {
+            ProgressPoints progressPointComponent = progressPoint.GetComponent<ProgressPoints>();
+            if (progressPointComponent != null)
+            {
+                SaveProgress saveProgress = SaveProgress.Instance;
+                int checkpointCount = saveProgress != null && saveProgress.ProgressPointsItems != null
+                    ? saveProgress.ProgressPointsItems.Length
+                    : 0;
+                int currentIndex = progressPointComponent.ProgressNumber - 1;
+                if (saveProgress != null && checkpointCount > 1 && currentIndex >= 0 && currentIndex < checkpointCount)
+                {
+                    ProgressPoints nextPoint = GetProgressPoint((currentIndex + 1) % checkpointCount);
+                    if (nextPoint != null)
+                    {
+                        Vector3 direction = nextPoint.transform.position - progressPoint.position;
+                        direction.y = 0f;
+                        if (direction.sqrMagnitude > 0.0001f)
+                        {
+                            return Quaternion.LookRotation(direction.normalized, Vector3.up);
+                        }
+                    }
+                }
+            }
+        }
+
+        return progressPoint != null ? progressPoint.rotation : transform.rotation;
+    }
+
+    private Quaternion ResolveTrackRespawnRotation(Vector3 position)
+    {
+        SaveProgress saveProgress = SaveProgress.Instance;
+        if (saveProgress == null || saveProgress.ProgressPointsItems == null || saveProgress.ProgressPointsItems.Length < 2)
+        {
+            return transform.rotation;
+        }
+
+        int nearestIndex = ResolveNearestCheckpointIndex(position);
+        if (nearestIndex < 0)
+        {
+            return transform.rotation;
+        }
+
+        ProgressPoints currentPoint = GetProgressPoint(nearestIndex);
+        ProgressPoints nextPoint = GetProgressPoint((nearestIndex + 1) % saveProgress.ProgressPointsItems.Length);
+        if (currentPoint == null || nextPoint == null)
+        {
+            return transform.rotation;
+        }
+
+        Vector3 direction = nextPoint.transform.position - currentPoint.transform.position;
+        direction.y = 0f;
+        if (direction.sqrMagnitude <= 0.0001f)
+        {
+            return transform.rotation;
+        }
+
+        return Quaternion.LookRotation(direction.normalized, Vector3.up);
     }
 
     public void SetGears()
@@ -533,7 +720,7 @@ public class PlayerCartContaol : MonoBehaviour
 
     private void TrackSafeRespawnPose()
     {
-        if (!m_grounded)
+        if (!m_grounded || isResetting || m_changeDirection || m_reverse)
         {
             return;
         }
@@ -553,7 +740,7 @@ public class PlayerCartContaol : MonoBehaviour
             return;
         }
 
-        RespawnPose candidate = CreateRespawnPose(transform.position, transform.rotation);
+        RespawnPose candidate = CreateRespawnPose(transform.position, transform.rotation, GetCurrentCheckpointNumber());
         if (m_safeRespawnHistory.Count > 0)
         {
             float distance = Vector3.Distance(candidate.Position, m_lastSafePosePosition);
@@ -580,8 +767,24 @@ public class PlayerCartContaol : MonoBehaviour
 
     private RespawnPose CreateRespawnPose(Vector3 position, Quaternion rotation)
     {
+        return CreateRespawnPose(position, rotation, 0);
+    }
+
+    private RespawnPose CreateRespawnPose(Vector3 position, Quaternion rotation, int checkpointNumber)
+    {
         Vector3 euler = rotation.eulerAngles;
-        return new RespawnPose(position, Quaternion.Euler(0f, euler.y, 0f));
+        return new RespawnPose(position, Quaternion.Euler(0f, euler.y, 0f), checkpointNumber);
+    }
+
+    private int GetCurrentCheckpointNumber()
+    {
+        int participantIndex = GetParticipantIndex();
+        if (participantIndex < 0 || participantIndex >= SaveProgress.CurrentCheckpoint.Length)
+        {
+            return 0;
+        }
+
+        return Mathf.Max(0, SaveProgress.CurrentCheckpoint[participantIndex]);
     }
 
     private void RecordSafePose(RespawnPose pose, bool force)
@@ -648,7 +851,7 @@ public class PlayerCartContaol : MonoBehaviour
             return true;
         }
 
-        pose = new RespawnPose(m_spawnPose.Position + Vector3.up * RespawnGroundLift, m_spawnPose.Rotation);
+        pose = new RespawnPose(m_spawnPose.Position + Vector3.up * RespawnGroundLift, m_spawnPose.Rotation, m_spawnPose.CheckpointNumber);
         return true;
     }
 
@@ -667,7 +870,7 @@ public class PlayerCartContaol : MonoBehaviour
         {
             if (Vector3.Dot(hit.normal, Vector3.up) >= RespawnMinGroundNormalDot)
             {
-                groundedPose = new RespawnPose(hit.point + Vector3.up * RespawnGroundLift, pose.Rotation);
+                groundedPose = new RespawnPose(hit.point + Vector3.up * RespawnGroundLift, pose.Rotation, pose.CheckpointNumber);
                 return true;
             }
         }
@@ -765,11 +968,490 @@ public class PlayerCartContaol : MonoBehaviour
     {
         public Vector3 Position;
         public Quaternion Rotation;
+        public int CheckpointNumber;
 
         public RespawnPose(Vector3 position, Quaternion rotation)
+            : this(position, rotation, 0)
+        {
+        }
+
+        public RespawnPose(Vector3 position, Quaternion rotation, int checkpointNumber)
         {
             Position = position;
             Rotation = rotation;
+            CheckpointNumber = checkpointNumber;
+        }
+    }
+
+    private void DisplayPosition()
+    {
+        if (PositionDisplay == null)
+        {
+            return;
+        }
+
+        PositionDisplay.text = BuildLeaderboardText(GetParticipantIndex());
+    }
+
+    private void ConfigureLeaderboardDisplay()
+    {
+        if (PositionDisplay == null)
+        {
+            return;
+        }
+
+        PositionDisplay.alignment = TextAnchor.UpperLeft;
+        PositionDisplay.horizontalOverflow = HorizontalWrapMode.Overflow;
+        PositionDisplay.verticalOverflow = VerticalWrapMode.Overflow;
+
+        RectTransform rectTransform = PositionDisplay.rectTransform;
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(0f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+        rectTransform.anchoredPosition = new Vector2(20f, -20f);
+    }
+
+    private string BuildLeaderboardText(int localParticipantIndex)
+    {
+        SaveProgress saveProgress = SaveProgress.Instance;
+        if (saveProgress == null)
+        {
+            return string.Empty;
+        }
+
+        List<int> rankingIndices = new List<int>(SaveProgress.ParticipantTags.Length);
+        for (int i = 0; i < SaveProgress.ParticipantTags.Length; i++)
+        {
+            if (SaveProgress.GetParticipantTransform(i) == null)
+            {
+                continue;
+            }
+
+            if (float.IsNegativeInfinity(GetParticipantRaceScore(i)))
+            {
+                continue;
+            }
+
+            rankingIndices.Add(i);
+        }
+
+        rankingIndices.Sort((left, right) =>
+        {
+            float rightScore = GetParticipantRaceScore(right);
+            float leftScore = GetParticipantRaceScore(left);
+            int scoreCompare = rightScore.CompareTo(leftScore);
+            if (scoreCompare != 0)
+            {
+                return scoreCompare;
+            }
+
+            int rightLap = Mathf.Max(0, SaveProgress.CurrentLap[right]);
+            int leftLap = Mathf.Max(0, SaveProgress.CurrentLap[left]);
+            int lapCompare = rightLap.CompareTo(leftLap);
+            if (lapCompare != 0)
+            {
+                return lapCompare;
+            }
+
+            int rightCheckpoint = Mathf.Max(0, SaveProgress.CurrentCheckpoint[right]);
+            int leftCheckpoint = Mathf.Max(0, SaveProgress.CurrentCheckpoint[left]);
+            int checkpointCompare = rightCheckpoint.CompareTo(leftCheckpoint);
+            if (checkpointCompare != 0)
+            {
+                return checkpointCompare;
+            }
+
+            return left.CompareTo(right);
+        });
+
+        StringBuilder builder = new StringBuilder(128);
+        builder.Append("排行榜");
+
+        for (int rank = 0; rank < rankingIndices.Count; rank++)
+        {
+            int participantIndex = rankingIndices[rank];
+            int lapAmount = Mathf.Max(0, SaveProgress.CurrentLap[participantIndex]) + 1;
+            int checkpoint = Mathf.Max(0, SaveProgress.CurrentCheckpoint[participantIndex]);
+            string participantName = GetParticipantDisplayName(participantIndex);
+
+            builder.AppendLine();
+            builder.Append(rank + 1)
+                .Append(". ")
+                .Append(participantName);
+
+            if (participantIndex == localParticipantIndex)
+            {
+                builder.Append(" [你]");
+            }
+
+            builder.Append("  第")
+                .Append(lapAmount)
+                .Append("圈  点");
+
+            if (checkpoint <= 0)
+            {
+                builder.Append("起点");
+            }
+            else
+            {
+                builder.Append(checkpoint);
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    private int GetParticipantIndex()
+    {
+        if (m_participantIndex >= 0 && m_participantIndex < SaveProgress.ParticipantTags.Length)
+        {
+            return m_participantIndex;
+        }
+
+        m_participantIndex = ResolveParticipantIndex(transform);
+        RegisterParticipantState();
+        return m_participantIndex;
+    }
+
+    public int ParticipantIndex
+    {
+        get { return GetParticipantIndex(); }
+    }
+
+    public static int ResolveParticipantIndex(Transform current)
+    {
+        if (current == null)
+        {
+            return -1;
+        }
+
+        Transform cursor = current;
+        while (cursor != null)
+        {
+            for (int i = 0; i < SaveProgress.ParticipantTags.Length; i++)
+            {
+                if (cursor.CompareTag(SaveProgress.ParticipantTags[i]))
+                {
+                    return i;
+                }
+            }
+
+            cursor = cursor.parent;
+        }
+
+        Transform root = current.root;
+        if (root != null)
+        {
+            Transform[] transforms = root.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                Transform node = transforms[i];
+                if (node == null)
+                {
+                    continue;
+                }
+
+                for (int j = 0; j < SaveProgress.ParticipantTags.Length; j++)
+                {
+                    if (node.CompareTag(SaveProgress.ParticipantTags[j]))
+                    {
+                        return j;
+                    }
+                }
+            }
+        }
+
+        return -1;
+    }
+
+    private int GetCurrentRacePosition(int playerIndex)
+    {
+        if (playerIndex < 0 || playerIndex >= SaveProgress.CurrentCheckpoint.Length)
+        {
+            return 0;
+        }
+
+        float playerScore = GetParticipantRaceScore(playerIndex);
+        if (float.IsNegativeInfinity(playerScore))
+        {
+            return 0;
+        }
+
+        int rank = 1;
+        for (int i = 0; i < SaveProgress.CurrentCheckpoint.Length; i++)
+        {
+            if (i == playerIndex)
+            {
+                continue;
+            }
+
+            float otherScore = GetParticipantRaceScore(i);
+            if (!float.IsNegativeInfinity(otherScore) && otherScore > playerScore + 0.01f)
+            {
+                rank++;
+            }
+        }
+
+        return rank;
+    }
+
+    private float GetParticipantRaceScore(int index)
+    {
+        if (index < 0 || index >= SaveProgress.CurrentCheckpoint.Length)
+        {
+            return float.NegativeInfinity;
+        }
+
+        SaveProgress saveProgress = SaveProgress.Instance;
+        if (saveProgress == null)
+        {
+            return float.NegativeInfinity;
+        }
+
+        int checkpointCount = saveProgress.ProgressPointsItems != null ? saveProgress.ProgressPointsItems.Length : 0;
+        int lap = Mathf.Max(0, SaveProgress.CurrentLap[index]);
+        int checkpoint = Mathf.Max(0, SaveProgress.CurrentCheckpoint[index]);
+
+        if (checkpointCount <= 0)
+        {
+            return lap * 100000f + checkpoint * 100f;
+        }
+
+        int normalizedCheckpoint = checkpoint <= 0 ? 0 : ((checkpoint - 1) % checkpointCount) + 1;
+        float progressWithinCheckpoint = GetCheckpointProgress(index, normalizedCheckpoint, checkpointCount);
+        return lap * 100000f + normalizedCheckpoint * 100f + progressWithinCheckpoint;
+    }
+
+    private float GetCheckpointProgress(int participantIndex, int normalizedCheckpoint, int checkpointCount)
+    {
+        Transform participantTransform = SaveProgress.GetParticipantTransform(participantIndex);
+        if (participantTransform == null || checkpointCount < 2 || normalizedCheckpoint <= 0)
+        {
+            return 0f;
+        }
+
+        ProgressPoints currentPoint = GetProgressPoint(normalizedCheckpoint - 1);
+        ProgressPoints nextPoint = GetProgressPoint(normalizedCheckpoint % checkpointCount);
+        if (currentPoint == null || nextPoint == null)
+        {
+            return 0f;
+        }
+
+        Vector3 segment = nextPoint.transform.position - currentPoint.transform.position;
+        segment.y = 0f;
+        float segmentLengthSqr = segment.sqrMagnitude;
+        if (segmentLengthSqr <= 0.0001f)
+        {
+            return 0f;
+        }
+
+        Vector3 fromCurrent = participantTransform.position - currentPoint.transform.position;
+        fromCurrent.y = 0f;
+        float progress = Vector3.Dot(fromCurrent, segment) / segmentLengthSqr;
+        return Mathf.Clamp01(progress);
+    }
+
+    private ProgressPoints GetProgressPoint(int index)
+    {
+        SaveProgress saveProgress = SaveProgress.Instance;
+        if (saveProgress == null || saveProgress.ProgressPointsItems == null)
+        {
+            return null;
+        }
+
+        if (index < 0 || index >= saveProgress.ProgressPointsItems.Length)
+        {
+            return null;
+        }
+
+        GameObject pointObject = saveProgress.ProgressPointsItems[index];
+        if (pointObject == null)
+        {
+            return null;
+        }
+
+        return pointObject.GetComponent<ProgressPoints>();
+    }
+
+    private Transform GetParticipantTransform(int index)
+    {
+        if (index < 0 || index >= SaveProgress.ParticipantTransforms.Length)
+        {
+            return null;
+        }
+
+        return SaveProgress.GetParticipantTransform(index);
+    }
+
+    private string GetParticipantDisplayName(int index)
+    {
+        if (index < 0 || index >= SaveProgress.ParticipantTags.Length)
+        {
+            return "未知";
+        }
+
+        switch (SaveProgress.ParticipantTags[index])
+        {
+            case "Player1":
+                return "玩家1";
+            case "Player2":
+                return "玩家2";
+            case "Player3":
+                return "玩家3";
+            case "Player4":
+                return "玩家4";
+            case "AI1":
+                return "AI1";
+            case "AI2":
+                return "AI2";
+            case "AI3":
+                return "AI3";
+            default:
+                return SaveProgress.ParticipantTags[index];
+        }
+    }
+
+    private string FormatPosition(int position)
+    {
+        if (position <= 0)
+        {
+            return "--";
+        }
+
+        if (position % 100 >= 11 && position % 100 <= 13)
+        {
+            return position + "th";
+        }
+
+        switch (position % 10)
+        {
+            case 1:
+                return position + "st";
+            case 2:
+                return position + "nd";
+            case 3:
+                return position + "rd";
+            default:
+                return position + "th";
+        }
+    }
+
+    public void FaceForward()
+    {
+        if (m_changeDirection || m_Rigidbody == null)
+        {
+            return;
+        }
+
+        m_changeDirection = true;
+        m_reverse = false;
+
+        KartSounds kartSounds = GetComponent<KartSounds>();
+        if (kartSounds != null)
+        {
+            kartSounds.IsReversing = false;
+        }
+
+        if (ForwardCamera != null && ReverseCamera != null)
+        {
+            m_camReverse = false;
+            ForwardCamera.SetActive(true);
+            ReverseCamera.SetActive(false);
+        }
+
+        m_gas = 0f;
+        m_brake = 0f;
+        m_steering = Vector2.zero;
+        m_drift = Vector2.zero;
+
+        m_Rigidbody.linearVelocity = Vector3.zero;
+        m_Rigidbody.angularVelocity = Vector3.zero;
+        transform.Rotate(0f, 180f, 0f);
+        m_Rigidbody.isKinematic = true;
+        StartCoroutine(ResetChangeDirection());
+    }
+
+    public void StopReverseAtProgressPoint()
+    {
+        if (m_changeDirection || m_Rigidbody == null)
+        {
+            return;
+        }
+
+        m_changeDirection = true;
+        m_reverse = false;
+
+        KartSounds kartSounds = GetComponent<KartSounds>();
+        if (kartSounds != null)
+        {
+            kartSounds.IsReversing = false;
+        }
+
+        if (ForwardCamera != null && ReverseCamera != null)
+        {
+            m_camReverse = false;
+            ForwardCamera.SetActive(true);
+            ReverseCamera.SetActive(false);
+        }
+
+        m_gas = 0f;
+        m_brake = 0f;
+        m_steering = Vector2.zero;
+        m_drift = Vector2.zero;
+
+        m_Rigidbody.linearVelocity = Vector3.zero;
+        m_Rigidbody.angularVelocity = Vector3.zero;
+        m_Rigidbody.isKinematic = true;
+        StartCoroutine(ResetChangeDirection());
+    }
+
+    IEnumerator ResetChangeDirection()
+    {
+        yield return new WaitForSeconds(1f);
+
+        if (m_Rigidbody != null)
+        {
+            m_Rigidbody.isKinematic = false;
+        }
+
+        yield return new WaitForSeconds(0.5f);
+        m_changeDirection = false;
+    }
+
+    public void DisplayLap()
+    {
+        if (LapDisplay == null)
+        {
+            return;
+        }
+
+        int participantIndex = GetParticipantIndex();
+        if (participantIndex < 0 || participantIndex >= SaveProgress.CurrentLap.Length)
+        {
+            LapDisplay.text = "Lap --";
+            return;
+        }
+
+        int lapAmount = Mathf.Max(0, SaveProgress.CurrentLap[participantIndex]) + 1;
+        LapDisplay.text = "Lap " + lapAmount.ToString();
+    }
+
+    private void RegisterParticipantState()
+    {
+        int participantIndex = m_participantIndex;
+        if (participantIndex < 0 || participantIndex >= SaveProgress.ParticipantTransforms.Length)
+        {
+            return;
+        }
+
+        SaveProgress.RegisterParticipant(participantIndex, transform);
+    }
+
+    private void OnDestroy()
+    {
+        if (m_participantIndex >= 0)
+        {
+            SaveProgress.UnregisterParticipant(m_participantIndex, transform);
         }
     }
 }

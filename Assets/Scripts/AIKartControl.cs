@@ -10,8 +10,15 @@ public class AIKartControl : MonoBehaviour
     public Transform[] AIWaypoints;
     public GameObject[] Wheels;
     public float MaxSpeed = 10f;
+    private int m_participantIndex = -1;
+
     void Start(){
         m_agent = GetComponent<NavMeshAgent>();
+        m_participantIndex = ResolveParticipantIndex(transform);
+        if (m_participantIndex >= 0)
+        {
+            SaveProgress.RegisterParticipant(m_participantIndex, transform);
+        }
         StartCoroutine(SetCheckDistance());
     }
     void Update(){
@@ -44,6 +51,74 @@ public class AIKartControl : MonoBehaviour
     private IEnumerator SetCheckDistance(){
         yield return new WaitForSeconds(1.0f);
         m_checkDistance = true;
+    }
+
+    private void OnDestroy()
+    {
+        if (m_participantIndex >= 0)
+        {
+            SaveProgress.UnregisterParticipant(m_participantIndex, transform);
+        }
+    }
+
+    private int ResolveParticipantIndex(Transform current)
+    {
+        if (current == null)
+        {
+            return -1;
+        }
+
+        Transform cursor = current;
+        while (cursor != null)
+        {
+            if (cursor.CompareTag("AI1"))
+            {
+                return 4;
+            }
+
+            if (cursor.CompareTag("AI2"))
+            {
+                return 5;
+            }
+
+            if (cursor.CompareTag("AI3"))
+            {
+                return 6;
+            }
+
+            cursor = cursor.parent;
+        }
+
+        Transform root = current.root;
+        if (root != null)
+        {
+            Transform[] transforms = root.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                Transform node = transforms[i];
+                if (node == null)
+                {
+                    continue;
+                }
+
+                if (node.CompareTag("AI1"))
+                {
+                    return 4;
+                }
+
+                if (node.CompareTag("AI2"))
+                {
+                    return 5;
+                }
+
+                if (node.CompareTag("AI3"))
+                {
+                    return 6;
+                }
+            }
+        }
+
+        return -1;
     }
 
     private void ChangeSpeed()

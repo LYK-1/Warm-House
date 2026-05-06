@@ -28,6 +28,9 @@ public class ObstacleSound : MonoBehaviour
     public bool HitByBoxingGlove;
 
     private bool m_oilSound;
+    private bool m_isOilSpinning;
+    private bool m_isOilContact;
+    private Coroutine m_oilSpinCoroutine;
     void Start()
     {
         m_rigidbody = GetComponent<Rigidbody>();
@@ -63,7 +66,14 @@ public class ObstacleSound : MonoBehaviour
         if (AIRotating)
         {
             transform.Rotate(0, 25, 0);
-            StartCoroutine(StopRotating());
+            if (!m_spinPlayed)
+            {
+                StartCoroutine(StopRotating());
+            }
+        }
+        if (m_isOilSpinning)
+        {
+            transform.Rotate(0, 25, 0);
         }
         if (HitByBoxingGlove)
         {
@@ -74,7 +84,10 @@ public class ObstacleSound : MonoBehaviour
             if (!IsPlayer)
             {
                 transform.Rotate(0, 25, 0);
-                StartCoroutine(StopRotating());
+                if (!m_spinPlayed)
+                {
+                    StartCoroutine(StopRotating());
+                }
             }
         }
     }      
@@ -102,12 +115,12 @@ public class ObstacleSound : MonoBehaviour
                     if (IsPlayer)
                     {
                         m_rigidbody.isKinematic = true;
-                        if (!IsPlayer)
-                        {
-                            AIisHit = true;
-                            m_agent.speed = 0;
-                            m_hasPlayed = true;
-                        }
+                    }
+                    else
+                    {
+                        AIisHit = true;
+                        m_agent.speed = 0;
+                        m_hasPlayed = true;
                     }
                 }
             }
@@ -144,20 +157,10 @@ public class ObstacleSound : MonoBehaviour
             if (IsPlayer && collision != null)
             {
                 transform.Rotate(0, 1.5f, 0);
+                return;
             }
-            if (!m_audioSource.isPlaying && !m_oilSound)
-            {
-                m_audioSource.clip = Splat;
-                m_audioSource.Play();
-                m_oilSound = true;
-            }
-            if (!IsPlayer && collision != null)
-            {
-                AIisHit = true;
-                m_agent.speed = 0;
-                transform.Rotate(0, 25, 0);
-                StartCoroutine(StopRotating());
-            }
+
+            StartOilSpin();
         }
     }
 
@@ -176,6 +179,8 @@ public class ObstacleSound : MonoBehaviour
         if (collision.gameObject.CompareTag("Oil"))
         {
             m_oilSound = false;
+            m_isOilContact = false;
+            StopOilSpin();
         }
     }
 
@@ -243,18 +248,74 @@ public class ObstacleSound : MonoBehaviour
 
     IEnumerator StopRotating()
     {
-        if (!m_audioSource.isPlaying && !m_spinPlayed)
+        if (m_spinPlayed)
+        {
+            yield break;
+        }
+
+        m_spinPlayed = true;
+
+        if (m_audioSource != null && !m_audioSource.isPlaying)
         {
             m_audioSource.clip = SpinSound;
             m_audioSource.Play();
-            m_spinPlayed = true;
-            yield return new WaitForSeconds(3);
-            AIRotating = false;
-            m_agent.speed = 20;
-            AIisHit = false;
-            m_spinPlayed = false;
-            HitByBoxingGlove = false;
         }
+
+        yield return new WaitForSeconds(3);
+        AIRotating = false;
+        m_agent.speed = 20;
+        AIisHit = false;
+        m_spinPlayed = false;
+        HitByBoxingGlove = false;
+    }
+
+    private void StartOilSpin()
+    {
+        if (IsPlayer || m_isOilContact || m_oilSpinCoroutine != null)
+        {
+            return;
+        }
+
+        if (!m_audioSource.isPlaying && !m_oilSound)
+        {
+            m_audioSource.clip = Splat;
+            m_audioSource.Play();
+            m_oilSound = true;
+        }
+
+        m_isOilContact = true;
+        m_oilSpinCoroutine = StartCoroutine(OilSpinRoutine());
+    }
+
+    private void StopOilSpin()
+    {
+        if (m_oilSpinCoroutine != null)
+        {
+            StopCoroutine(m_oilSpinCoroutine);
+            m_oilSpinCoroutine = null;
+        }
+
+        m_isOilSpinning = false;
+
+        if (!IsPlayer)
+        {
+            AIisHit = false;
+            m_agent.speed = 25;
+        }
+    }
+
+    private IEnumerator OilSpinRoutine()
+    {
+        m_isOilSpinning = true;
+        AIisHit = true;
+        m_agent.speed = 0;
+
+        yield return new WaitForSeconds(3f);
+
+        m_isOilSpinning = false;
+        AIisHit = false;
+        m_agent.speed = 25;
+        m_oilSpinCoroutine = null;
     }
 
     IEnumerator PlayerReact()

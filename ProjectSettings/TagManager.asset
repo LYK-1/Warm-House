@@ -20,6 +20,7 @@ TagManager:
   - Player2
   - Player3
   - Player4
+  - Oil
   layers:
   - Default
   - TransparentFX
@@ -27,7 +28,7 @@ TagManager:
   - 
   - Water
   - UI
-  - 
+  - Map
   - 
   - 
   - 
