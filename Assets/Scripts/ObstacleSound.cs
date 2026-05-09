@@ -231,9 +231,18 @@ public class ObstacleSound : MonoBehaviour
             m_audioSource.clip = ExplodeSound;
             m_audioSource.Play();
         }
-        transform.localScale =new Vector3(0,0,0);
-        yield return new WaitForSeconds(2);
-        transform.localScale=new Vector3(1,1,1);
+        if (m_rigidbody != null)
+        {
+            m_rigidbody.isKinematic = true;
+        }
+        if (!IsPlayer && m_agent != null)
+        {
+            m_agent.speed = 0;
+            m_agent.isStopped = true;
+        }
+        transform.localScale = new Vector3(0, 0, 0);
+        yield return new WaitForSeconds(2f);
+        transform.localScale = new Vector3(1, 1, 1);
         if (EngineRunning != null)
         {
             EngineRunning.SetActive(true);
@@ -247,6 +256,11 @@ public class ObstacleSound : MonoBehaviour
             m_agent.isStopped = false;
         }
         m_rigidbody.isKinematic = false;
+        if (m_rigidbody != null)
+        {
+            m_rigidbody.linearVelocity = Vector3.zero;
+            m_rigidbody.angularVelocity = Vector3.zero;
+        }
         if (m_audioSource != null)
         {
             m_audioSource.clip = Return;

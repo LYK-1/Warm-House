@@ -18,7 +18,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &6219673336673673437
 Transform:
   m_ObjectHideFlags: 0
@@ -5646,8 +5646,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6906028022494095305}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.13377973, y: 0.0000007695608, z: -0.00000010693985, w: 0.99101114}
-  m_LocalPosition: {x: 0.4365034, y: 1.2367859, z: -7.2333694}
+  m_LocalRotation: {x: -0.000000037156752, y: -0.9915814, z: 0.12948549, w: -0.00000025742884}
+  m_LocalPosition: {x: 0.43650812, y: 1.2367859, z: 0.9066531}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6129,7 +6129,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0.06716057, b: 0, a: 1}
+  m_Color: {r: 0.45048714, g: 1, b: 0, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -6309,7 +6309,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &3674371427481472741
 Transform:
   m_ObjectHideFlags: 0

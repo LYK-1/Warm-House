@@ -89,7 +89,7 @@ public class PlayerCartContaol : MonoBehaviour
         m_Rigidbody = GetComponent<Rigidbody>();
         m_Rigidbody.centerOfMass = new Vector3(0f, -0.5f, 0f);
         m_Rigidbody.maxAngularVelocity = 5f;
-        SyncRaceStartState();
+        // SyncRaceStartState();
         m_participantIndex = ResolveParticipantIndex(transform);
         RegisterParticipantState();
 
@@ -117,7 +117,7 @@ public class PlayerCartContaol : MonoBehaviour
             return;
         }
 
-        SyncRaceStartState();
+        // SyncRaceStartState();
         if (!SaveProgress.RaceHasStarted)
         {
             return;
@@ -138,7 +138,7 @@ public class PlayerCartContaol : MonoBehaviour
         }
     }
 
-    private void SyncRaceStartState()
+    /* private void SyncRaceStartState()
     {
         if (m_Rigidbody == null)
         {
@@ -163,7 +163,7 @@ public class PlayerCartContaol : MonoBehaviour
             m_Rigidbody.linearVelocity = Vector3.zero;
             m_Rigidbody.angularVelocity = Vector3.zero;
         }
-    }
+    } */
 
     private void Drive(float acceleration, float brake, Vector2 steer, Vector2 drift)
     {
@@ -410,14 +410,38 @@ public class PlayerCartContaol : MonoBehaviour
     {
         if (m_camReverse)
         {
-            m_camReverse = false;
-            ForwardCamera.SetActive(true);
-            ReverseCamera.SetActive(false);
+            SetForwardCameraActive();
         }
         else if (!m_camReverse)
         {
-            m_camReverse = true;
+            SetReverseCameraActive();
+        }
+    }
+
+    public void SetForwardCameraActive()
+    {
+        m_camReverse = false;
+        if (ForwardCamera != null)
+        {
+            ForwardCamera.SetActive(true);
+        }
+
+        if (ReverseCamera != null)
+        {
+            ReverseCamera.SetActive(false);
+        }
+    }
+
+    public void SetReverseCameraActive()
+    {
+        m_camReverse = true;
+        if (ForwardCamera != null)
+        {
             ForwardCamera.SetActive(false);
+        }
+
+        if (ReverseCamera != null)
+        {
             ReverseCamera.SetActive(true);
         }
     }
