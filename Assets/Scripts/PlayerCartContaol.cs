@@ -36,6 +36,8 @@ public class PlayerCartContaol : MonoBehaviour
     private bool m_grounded;
     private bool isResetting = false;
     private Coroutine constraintCoroutine;
+    private bool m_isFinishing = false;
+    private Coroutine m_finishCoroutine;
 
     public Text speedText;
     public float[] m_driveTorqueGear = new float[5];
@@ -114,6 +116,17 @@ public class PlayerCartContaol : MonoBehaviour
     {
         if (isResetting)
         {
+            return;
+        }
+
+        if (m_isFinishing)
+        {
+            return;
+        }
+
+        if (SaveProgress.RaCeHasFiniShed)
+        {
+            ZeroMotionForFinish();
             return;
         }
 
@@ -398,6 +411,11 @@ public class PlayerCartContaol : MonoBehaviour
 
     public void OnReset(InputValue button)
     {
+        if (SaveProgress.RaCeHasFiniShed)
+        {
+            return;
+        }
+
         if (!button.isPressed || isResetting)
         {
             return;
@@ -408,6 +426,11 @@ public class PlayerCartContaol : MonoBehaviour
 
     public void OnCameraChange(InputValue button)
     {
+        if (m_isFinishing || SaveProgress.RaCeHasFiniShed)
+        {
+            return;
+        }
+
         if (m_camReverse)
         {
             SetForwardCameraActive();
@@ -512,6 +535,100 @@ public class PlayerCartContaol : MonoBehaviour
 
         m_brake = 0f;
         isResetting = false;
+    }
+
+    public void BeginFinishSequence()
+    {
+        if (m_Rigidbody == null || m_isFinishing)
+        {
+            return;
+        }
+
+        m_isFinishing = true;
+        SetReverseCameraActive();
+
+        if (m_finishCoroutine != null)
+        {
+            StopCoroutine(m_finishCoroutine);
+        }
+
+        m_finishCoroutine = StartCoroutine(FinishSequence());
+    }
+
+    private IEnumerator FinishSequence()
+    {
+        SaveProgress.RaceHasStarted = false;
+
+        if (constraintCoroutine != null)
+        {
+            StopCoroutine(constraintCoroutine);
+            constraintCoroutine = null;
+        }
+
+        m_changeDirection = false;
+        m_reverse = false;
+        m_gas = 0f;
+        m_brake = 0f;
+        m_steering = Vector2.zero;
+        m_drift = Vector2.zero;
+
+        KartSounds kartSounds = GetComponent<KartSounds>();
+        if (kartSounds != null)
+        {
+            kartSounds.IsReversing = false;
+        }
+
+        m_Rigidbody.isKinematic = false;
+        m_Rigidbody.constraints = RigidbodyConstraints.None;
+
+        for (int i = 0; i < WheelColliders.Length; i++)
+        {
+            WheelColliders[i].motorTorque = 0f;
+            WheelColliders[i].brakeTorque = 0f;
+        }
+
+        Vector3 startLinearVelocity = m_Rigidbody.linearVelocity;
+        Vector3 startAngularVelocity = m_Rigidbody.angularVelocity;
+        float finishDuration = 0.2f;
+        float elapsed = 0f;
+
+        while (elapsed < finishDuration)
+        {
+            float t = Mathf.Clamp01(elapsed / finishDuration);
+            float damp = 1f - Mathf.SmoothStep(0f, 1f, t);
+            m_Rigidbody.linearVelocity = startLinearVelocity * damp;
+            m_Rigidbody.angularVelocity = startAngularVelocity * damp;
+
+            elapsed += Time.fixedDeltaTime;
+            yield return new WaitForFixedUpdate();
+        }
+
+        m_Rigidbody.linearVelocity = Vector3.zero;
+        m_Rigidbody.angularVelocity = Vector3.zero;
+
+        m_isFinishing = false;
+        m_finishCoroutine = null;
+    }
+
+    private void ZeroMotionForFinish()
+    {
+        if (m_Rigidbody == null)
+        {
+            return;
+        }
+
+        m_gas = 0f;
+        m_brake = 0f;
+        m_steering = Vector2.zero;
+        m_drift = Vector2.zero;
+        m_Rigidbody.linearVelocity = Vector3.zero;
+        m_Rigidbody.angularVelocity = Vector3.zero;
+
+        for (int i = 0; i < WheelColliders.Length; i++)
+        {
+            WheelColliders[i].motorTorque = 0f;
+            WheelColliders[i].brakeTorque = 0f;
+        }
     }
 
     public void RegisterProgressRespawnPoint(Transform progressPoint)
@@ -1506,7 +1623,13 @@ public class PlayerCartContaol : MonoBehaviour
             return;
         }
 
-        int lapAmount = Mathf.Max(0, SaveProgress.CurrentLap[participantIndex]) + 1;
+        if (SaveProgress.RaCeHasFiniShed)
+        {
+            LapDisplay.text = "Lap " + SaveProgress.MaxLaps.ToString();
+            return;
+        }
+
+        int lapAmount = Mathf.Min(Mathf.Max(0, SaveProgress.CurrentLap[participantIndex]) + 1, SaveProgress.MaxLaps);
         LapDisplay.text = "Lap " + lapAmount.ToString();
     }
 

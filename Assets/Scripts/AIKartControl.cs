@@ -11,6 +11,7 @@ public class AIKartControl : MonoBehaviour
     public GameObject[] Wheels;
     public float MaxSpeed = 10f;
     private int m_participantIndex = -1;
+    private bool m_isFinishing;
 
     private bool m_raceHasBegun;
     void Start(){
@@ -23,6 +24,12 @@ public class AIKartControl : MonoBehaviour
         m_checkDistance = false;
     }
     void Update(){
+        if (m_isFinishing || SaveProgress.RaCeHasFiniShed)
+        {
+            StopMoving();
+            return;
+        }
+
         if (!SaveProgress.RaceHasStarted)
         {
             return;
@@ -171,5 +178,29 @@ public class AIKartControl : MonoBehaviour
                 m_agent.speed = currentSpeed;
             }
         }
+    }
+
+    public void BeginFinishSequence()
+    {
+        if (m_isFinishing)
+        {
+            return;
+        }
+
+        m_isFinishing = true;
+        StopMoving();
+    }
+
+    private void StopMoving()
+    {
+        if (m_agent == null)
+        {
+            return;
+        }
+
+        m_agent.isStopped = true;
+        m_agent.ResetPath();
+        m_agent.speed = 0f;
+        m_agent.angularSpeed = 0f;
     }
 }

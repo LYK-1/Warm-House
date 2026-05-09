@@ -15,7 +15,6 @@ public class RaceStart : MonoBehaviour
 
     IEnumerator Start()
     {
-        // Let the Timeline finish its last frame before we tear it down and start the race.
         yield return null;
 
         if (TimelineHolder != null)

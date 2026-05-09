@@ -17,6 +17,8 @@ public class SaveProgress : MonoBehaviour
     public static int[] PlayerlItemsAmounts = new int[4] { 10, 10 ,10, 10 };
 
     public static bool RaceHasStarted;
+    public static int MaxLaps = 1;
+    public static bool RaCeHasFiniShed;
 
     private void Awake()
     {
@@ -32,6 +34,7 @@ public class SaveProgress : MonoBehaviour
         LapNumber = 0;
         m_resetAmounts = 0;
         RaceHasStarted = false;
+        RaCeHasFiniShed = false;
     }
 
     private void OnDisable()

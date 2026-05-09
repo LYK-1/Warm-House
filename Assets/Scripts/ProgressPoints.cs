@@ -19,7 +19,7 @@ public class ProgressPoints : MonoBehaviour
         PlayerCartContaol player = other.GetComponentInParent<PlayerCartContaol>();
         if (player != null)
         {
-            HandleProgressPoint(PlayerCartContaol.ResolveParticipantIndex(player.transform), player.transform, player);
+            HandleProgressPoint(PlayerCartContaol.ResolveParticipantIndex(player.transform), player.transform, player, null);
             return;
         }
 
@@ -55,15 +55,15 @@ public class ProgressPoints : MonoBehaviour
                 StartCoroutine(ResetSpawnoil());
             }
 
-            HandleProgressPoint(ResolveKartIndex(aiKart.transform), aiKart.transform, null);
+            HandleProgressPoint(ResolveKartIndex(aiKart.transform), aiKart.transform, null, aiKart);
             return;
         }
 
         int kartIndex = ResolveKartIndex(other.transform);
-        HandleProgressPoint(kartIndex, other.transform, null);
+        HandleProgressPoint(kartIndex, other.transform, null, null);
     }
 
-    private void HandleProgressPoint(int kartIndex, Transform current, PlayerCartContaol player)
+    private void HandleProgressPoint(int kartIndex, Transform current, PlayerCartContaol player, AIKartControl aiKart)
     {
         if (kartIndex < 0 || kartIndex >= SaveProgress.CurrentCheckpoint.Length || current == null)
         {
@@ -93,7 +93,6 @@ public class ProgressPoints : MonoBehaviour
 
         if (currentCheckpoint == expectedNextCheckpoint)
         {
-            // Correct-direction reverse at a checkpoint: stop and switch back to forward without flipping the car.
             if (player != null && player.m_reverse)
             {
                 player.StopReverseAtProgressPoint();
@@ -107,7 +106,24 @@ public class ProgressPoints : MonoBehaviour
 
             if (StartLine && previousCheckpoint == checkpointCount)
             {
-                SaveProgress.CurrentLap[kartIndex]++;
+                SaveProgress.CurrentLap[kartIndex] = Mathf.Min(SaveProgress.CurrentLap[kartIndex] + 1, SaveProgress.MaxLaps);
+
+                if (player != null && SaveProgress.CurrentLap[kartIndex] >= SaveProgress.MaxLaps)
+                {
+                    if (!SaveProgress.RaCeHasFiniShed)
+                    {
+                        SaveProgress.RaCeHasFiniShed = true;
+                        SaveProgress.RaceHasStarted = false;
+
+                        if (player != null)
+                        {
+                            player.BeginFinishSequence();
+                        }
+                    }
+
+                    SaveProgress.CurrentCheckpoint[kartIndex] = currentCheckpoint;
+                    return;
+                }
             }
 
             SaveProgress.CurrentCheckpoint[kartIndex] = currentCheckpoint;
