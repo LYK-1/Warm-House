@@ -1,6 +1,5 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -49,6 +48,13 @@ public class PlayerCartContaol : MonoBehaviour
     private float m_lastCollisionStayLogTime;
     private float m_lastHazardContactTime = -999f;
 
+    [Header("Collision")]
+    [SerializeField] private float WallBounceRetention = 0.25f;
+    [SerializeField] private float WallRollPitchDamping = 0.35f;
+    [SerializeField] private float WallYawDamping = 0.9f;
+    [SerializeField] private float WallMinBounceSpeed = 2.5f;
+    [SerializeField] private float WallPushOutDistance = 0.6f;
+
     [Header("Reset")]
     [SerializeField] private float SafePoseRecordInterval = 0.25f;
     [SerializeField] private float SafePoseMinDistance = 3f;
@@ -82,6 +88,8 @@ public class PlayerCartContaol : MonoBehaviour
     {
         m_Rigidbody = GetComponent<Rigidbody>();
         m_Rigidbody.centerOfMass = new Vector3(0f, -0.5f, 0f);
+        m_Rigidbody.maxAngularVelocity = 5f;
+        SyncRaceStartState();
         m_participantIndex = ResolveParticipantIndex(transform);
         RegisterParticipantState();
 
@@ -109,6 +117,12 @@ public class PlayerCartContaol : MonoBehaviour
             return;
         }
 
+        SyncRaceStartState();
+        if (!SaveProgress.RaceHasStarted)
+        {
+            return;
+        }
+
         Drive(m_gas, m_brake, m_steering, m_drift);
         AddDownForce();
         TrackSafeRespawnPose();
@@ -121,6 +135,33 @@ public class PlayerCartContaol : MonoBehaviour
         if (speedText != null)
         {
             speedText.text = currentSpeed.ToString("F0");
+        }
+    }
+
+    private void SyncRaceStartState()
+    {
+        if (m_Rigidbody == null)
+        {
+            return;
+        }
+
+        if (!SaveProgress.RaceHasStarted)
+        {
+            if (!m_Rigidbody.isKinematic)
+            {
+                m_Rigidbody.linearVelocity = Vector3.zero;
+                m_Rigidbody.angularVelocity = Vector3.zero;
+                m_Rigidbody.isKinematic = true;
+            }
+
+            return;
+        }
+
+        if (m_Rigidbody.isKinematic)
+        {
+            m_Rigidbody.isKinematic = false;
+            m_Rigidbody.linearVelocity = Vector3.zero;
+            m_Rigidbody.angularVelocity = Vector3.zero;
         }
     }
 
@@ -276,11 +317,23 @@ public class PlayerCartContaol : MonoBehaviour
 
     public void OnAccelerate(InputValue value)
     {
+        if (!SaveProgress.RaceHasStarted)
+        {
+            m_gas = 0f;
+            return;
+        }
+
         m_gas = value.isPressed ? 1f : 0f;
     }
 
     public void OnBrake(InputValue button)
     {
+        if (!SaveProgress.RaceHasStarted)
+        {
+            m_brake = 0f;
+            return;
+        }
+
         if (button.isPressed)
         {
             m_brake = 1f;
@@ -301,11 +354,22 @@ public class PlayerCartContaol : MonoBehaviour
 
     public void OnDrift(InputValue value)
     {
+        if (!SaveProgress.RaceHasStarted)
+        {
+            m_drift = Vector2.zero;
+            return;
+        }
+
         m_drift = value.Get<Vector2>();
     }
 
     public void OnReverse(InputValue button)
     {
+        if (!SaveProgress.RaceHasStarted)
+        {
+            return;
+        }
+
         if (m_reverse)
         {
             m_reverse = false;
@@ -323,6 +387,12 @@ public class PlayerCartContaol : MonoBehaviour
     }
     public void OnSteering(InputValue value)
     {
+        if (!SaveProgress.RaceHasStarted)
+        {
+            m_steering = Vector2.zero;
+            return;
+        }
+
         m_steering = value.Get<Vector2>();
     }
 
@@ -412,7 +482,7 @@ public class PlayerCartContaol : MonoBehaviour
 
         yield return new WaitForSeconds(0.2f);
 
-        m_Rigidbody.isKinematic = false;
+        m_Rigidbody.isKinematic = !SaveProgress.RaceHasStarted;
         m_Rigidbody.linearVelocity = Vector3.zero;
         m_Rigidbody.angularVelocity = Vector3.zero;
 
@@ -606,6 +676,7 @@ public class PlayerCartContaol : MonoBehaviour
     private void OnCollisionEnter(Collision collision)
     {
         MarkHazardContact(collision.collider);
+        ApplyWallCollisionResponse(collision, true);
 
         if (!CollisionDebugLogging || collision.collider == null)
         {
@@ -618,6 +689,7 @@ public class PlayerCartContaol : MonoBehaviour
     private void OnCollisionStay(Collision collision)
     {
         MarkHazardContact(collision.collider);
+        ApplyWallCollisionResponse(collision, false);
 
         if (!CollisionDebugLogging || collision.collider == null)
         {
@@ -675,6 +747,69 @@ public class PlayerCartContaol : MonoBehaviour
         return false;
     }
 
+    private void ApplyWallCollisionResponse(Collision collision, bool applyBounce)
+    {
+        if (m_Rigidbody == null || collision == null || collision.collider == null)
+        {
+            return;
+        }
+
+        if (IsSelfCollider(collision.collider) || !IsWallLikeCollider(collision.collider))
+        {
+            return;
+        }
+
+        if (collision.contactCount <= 0)
+        {
+            return;
+        }
+
+        ContactPoint contact = collision.GetContact(0);
+        Vector3 wallNormal = Vector3.ProjectOnPlane(contact.normal, Vector3.up);
+        if (wallNormal.sqrMagnitude <= 0.0001f)
+        {
+            return;
+        }
+
+        wallNormal.Normalize();
+
+        Vector3 planarVelocity = Vector3.ProjectOnPlane(m_Rigidbody.linearVelocity, Vector3.up);
+        float incomingSpeed = Vector3.Dot(planarVelocity, -wallNormal);
+
+        if (applyBounce && incomingSpeed > WallMinBounceSpeed)
+        {
+            m_Rigidbody.position = m_Rigidbody.position + (wallNormal * WallPushOutDistance);
+
+            Vector3 bouncedPlanarVelocity = Vector3.Reflect(planarVelocity, wallNormal) * WallBounceRetention;
+            m_Rigidbody.linearVelocity = new Vector3(
+                bouncedPlanarVelocity.x,
+                m_Rigidbody.linearVelocity.y,
+                bouncedPlanarVelocity.z);
+        }
+
+        Vector3 angularVelocity = m_Rigidbody.angularVelocity;
+        angularVelocity.x *= WallRollPitchDamping;
+        angularVelocity.y *= WallYawDamping;
+        angularVelocity.z *= WallRollPitchDamping;
+        m_Rigidbody.angularVelocity = angularVelocity;
+    }
+
+    private bool IsWallLikeCollider(Collider other)
+    {
+        if (other == null)
+        {
+            return false;
+        }
+
+        PhysicsMaterial sharedMaterial = other.sharedMaterial;
+        if (sharedMaterial != null && sharedMaterial.name == "Blockers")
+        {
+            return true;
+        }
+
+        return other.name.Contains("Blocker") || other.name.Contains("Fence");
+    }
+
     private void LogCollision(string eventName, Collision collision)
     {
         ContactPoint contact = default;
@@ -695,17 +830,17 @@ public class PlayerCartContaol : MonoBehaviour
             message += $" point={contact.point} normal={contact.normal}";
         }
 
-        //Debug.Log(message, collision.collider != null ? collision.collider.gameObject : gameObject);
+        // Debug.Log(message, collision.collider != null ? collision.collider.gameObject : gameObject);
     }
 
     private void LogTrigger(string eventName, Collider other)
     {
-        //Vector3 closestPoint = other.ClosestPoint(transform.position);
-        //string message =
-        //    $"[CollisionDebug][{name}] {eventName} other={DescribeCollider(other)} " +
-        //    $"playerPosition={transform.position} closestPoint={closestPoint}";
+        Vector3 closestPoint = other != null ? other.bounds.ClosestPoint(transform.position) : transform.position;
+        string message =
+            $"[CollisionDebug][{name}] {eventName} other={DescribeCollider(other)} " +
+            $"playerPosition={transform.position} closestPoint={closestPoint}";
 
-        //Debug.Log(message, other.gameObject);
+        // Debug.Log(message, other.gameObject);
     }
 
     private void MarkHazardContact(Collider other)
@@ -990,7 +1125,7 @@ public class PlayerCartContaol : MonoBehaviour
             return;
         }
 
-        PositionDisplay.text = BuildLeaderboardText(GetParticipantIndex());
+        PositionDisplay.text = BuildRankText(GetParticipantIndex());
     }
 
     private void ConfigureLeaderboardDisplay()
@@ -1000,105 +1135,20 @@ public class PlayerCartContaol : MonoBehaviour
             return;
         }
 
-        PositionDisplay.alignment = TextAnchor.UpperLeft;
+        PositionDisplay.alignment = TextAnchor.LowerRight;
         PositionDisplay.horizontalOverflow = HorizontalWrapMode.Overflow;
         PositionDisplay.verticalOverflow = VerticalWrapMode.Overflow;
-
-        RectTransform rectTransform = PositionDisplay.rectTransform;
-        rectTransform.anchorMin = new Vector2(0f, 1f);
-        rectTransform.anchorMax = new Vector2(0f, 1f);
-        rectTransform.pivot = new Vector2(0f, 1f);
-        rectTransform.anchoredPosition = new Vector2(20f, -20f);
     }
 
-    private string BuildLeaderboardText(int localParticipantIndex)
+    private string BuildRankText(int localParticipantIndex)
     {
-        SaveProgress saveProgress = SaveProgress.Instance;
-        if (saveProgress == null)
+        int rank = GetCurrentRacePosition(localParticipantIndex);
+        if (rank <= 0)
         {
-            return string.Empty;
+            return "Rank: --";
         }
 
-        List<int> rankingIndices = new List<int>(SaveProgress.ParticipantTags.Length);
-        for (int i = 0; i < SaveProgress.ParticipantTags.Length; i++)
-        {
-            if (SaveProgress.GetParticipantTransform(i) == null)
-            {
-                continue;
-            }
-
-            if (float.IsNegativeInfinity(GetParticipantRaceScore(i)))
-            {
-                continue;
-            }
-
-            rankingIndices.Add(i);
-        }
-
-        rankingIndices.Sort((left, right) =>
-        {
-            float rightScore = GetParticipantRaceScore(right);
-            float leftScore = GetParticipantRaceScore(left);
-            int scoreCompare = rightScore.CompareTo(leftScore);
-            if (scoreCompare != 0)
-            {
-                return scoreCompare;
-            }
-
-            int rightLap = Mathf.Max(0, SaveProgress.CurrentLap[right]);
-            int leftLap = Mathf.Max(0, SaveProgress.CurrentLap[left]);
-            int lapCompare = rightLap.CompareTo(leftLap);
-            if (lapCompare != 0)
-            {
-                return lapCompare;
-            }
-
-            int rightCheckpoint = Mathf.Max(0, SaveProgress.CurrentCheckpoint[right]);
-            int leftCheckpoint = Mathf.Max(0, SaveProgress.CurrentCheckpoint[left]);
-            int checkpointCompare = rightCheckpoint.CompareTo(leftCheckpoint);
-            if (checkpointCompare != 0)
-            {
-                return checkpointCompare;
-            }
-
-            return left.CompareTo(right);
-        });
-
-        StringBuilder builder = new StringBuilder(128);
-        builder.Append("排行榜");
-
-        for (int rank = 0; rank < rankingIndices.Count; rank++)
-        {
-            int participantIndex = rankingIndices[rank];
-            int lapAmount = Mathf.Max(0, SaveProgress.CurrentLap[participantIndex]) + 1;
-            int checkpoint = Mathf.Max(0, SaveProgress.CurrentCheckpoint[participantIndex]);
-            string participantName = GetParticipantDisplayName(participantIndex);
-
-            builder.AppendLine();
-            builder.Append(rank + 1)
-                .Append(". ")
-                .Append(participantName);
-
-            if (participantIndex == localParticipantIndex)
-            {
-                builder.Append(" [你]");
-            }
-
-            builder.Append("  第")
-                .Append(lapAmount)
-                .Append("圈  点");
-
-            if (checkpoint <= 0)
-            {
-                builder.Append("起点");
-            }
-            else
-            {
-                builder.Append(checkpoint);
-            }
-        }
-
-        return builder.ToString();
+        return $"Rank: {rank}";
     }
 
     private int GetParticipantIndex()

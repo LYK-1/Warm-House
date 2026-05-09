@@ -12,6 +12,7 @@ public class AIKartControl : MonoBehaviour
     public float MaxSpeed = 10f;
     private int m_participantIndex = -1;
 
+    private bool m_raceHasBegun;
     void Start(){
         m_agent = GetComponent<NavMeshAgent>();
         m_participantIndex = ResolveParticipantIndex(transform);
@@ -19,18 +20,47 @@ public class AIKartControl : MonoBehaviour
         {
             SaveProgress.RegisterParticipant(m_participantIndex, transform);
         }
-        StartCoroutine(SetCheckDistance());
+        m_checkDistance = false;
     }
     void Update(){
-        m_agent.SetDestination(AIWaypoints[m_currentwaypoint].position);
-        CheckDistanceToNextTarget();
-        Rotatewheels();
-        if (GetComponent<ObstacleSound>().AIisHit == false){
-            ChangeSpeed();
+        if (!SaveProgress.RaceHasStarted)
+        {
+            return;
+        }
+
+        if (AIWaypoints == null || AIWaypoints.Length == 0)
+        {
+            return;
+        }
+
+        if (!m_raceHasBegun)
+        {
+            StartCoroutine(SetCheckDistance());
+            m_raceHasBegun = true;
+        }
+        if (m_raceHasBegun)
+        {
+            m_agent.SetDestination(AIWaypoints[m_currentwaypoint].position);
+            CheckDistanceToNextTarget();
+            Rotatewheels();
+            if (GetComponent<ObstacleSound>().AIisHit == false)
+            {
+                ChangeSpeed();
+            }
         }
     }
 
     private void CheckDistanceToNextTarget(){
+        if (AIWaypoints == null || AIWaypoints.Length == 0)
+        {
+            return;
+        }
+
+        if (m_agent.pathPending)
+        {
+            return;
+        }
+
         if (m_agent.remainingDistance <= m_agent.stoppingDistance + 0.1f && m_checkDistance){
             if (m_currentwaypoint < AIWaypoints.Length-1){
                 m_currentwaypoint++;

@@ -1,5 +1,7 @@
 using System;
+using System.Collections;
 using UnityEngine;
+using TMPro;
 
 public class SaveProgress : MonoBehaviour
 {
@@ -14,6 +16,13 @@ public class SaveProgress : MonoBehaviour
     private int m_resetAmounts;
     public static int LapNumber;
 
+    public static int[] PlayerlItemsAmounts = new int[4] { 10, 10 ,10, 10 };
+
+    public static bool RaceHasStarted;
+
+    [SerializeField] private float RaceStartCountdown = 3f;
+    [SerializeField] private TMP_Text m_startText;
+
     private void Awake()
     {
         Instance = this;
@@ -27,6 +36,7 @@ public class SaveProgress : MonoBehaviour
         Reset = true;
         LapNumber = 0;
         m_resetAmounts = 0;
+        RaceHasStarted = false;
     }
 
     private void OnDisable()
@@ -72,6 +82,8 @@ public class SaveProgress : MonoBehaviour
 
     void Start()
     {
+        CacheStartText();
+        SetStartText(string.Empty);
         int progressNumber = 1;
 
         for (int i = 0; i < ProgressPointsItems.Length; i++)
@@ -92,5 +104,52 @@ public class SaveProgress : MonoBehaviour
         }
 
         Reset = false;
+        StartCoroutine(BeginRaceAfterCountdown());
+    }
+
+    private void CacheStartText()
+    {
+        if (m_startText != null)
+        {
+            return;
+        }
+
+        GameObject startTextObject = GameObject.Find("Start Text");
+        if (startTextObject != null)
+        {
+            startTextObject.TryGetComponent(out m_startText);
+        }
+    }
+
+    private void SetStartText(string value)
+    {
+        CacheStartText();
+        if (m_startText != null)
+        {
+            m_startText.text = value;
+        }
+    }
+
+    private IEnumerator BeginRaceAfterCountdown()
+    {
+        float countdown = Mathf.Max(0f, RaceStartCountdown);
+        if (countdown <= 0f)
+        {
+            SetStartText(string.Empty);
+            RaceHasStarted = true;
+            yield break;
+        }
+
+        int displayCount = Mathf.CeilToInt(countdown);
+        for (int remaining = displayCount; remaining > 0; remaining--)
+        {
+            SetStartText(remaining.ToString());
+            yield return new WaitForSeconds(1f);
+        }
+
+        SetStartText("GO!");
+        yield return new WaitForSeconds(1f);
+        SetStartText(string.Empty);
+        RaceHasStarted = true;
     }
 }

@@ -30,6 +30,7 @@ public class ProgressPoints : MonoBehaviour
             {
                 aiKart.MaxSpeed = Random.Range(AISetSpeed, AIMaxSpeed);
             }
+
             if (SpawnBomb)
             {
                 SpecialItemsAI specialItems = other.GetComponentInParent<SpecialItemsAI>();
@@ -37,9 +38,11 @@ public class ProgressPoints : MonoBehaviour
                 {
                     specialItems.SpawnBomb();
                 }
+
                 SpawnBomb = false;
                 StartCoroutine(ResetSpawnBomb());
             }
+
             if (SpawnOil)
             {
                 SpecialItemsAI specialItems = other.GetComponentInParent<SpecialItemsAI>();
@@ -47,6 +50,7 @@ public class ProgressPoints : MonoBehaviour
                 {
                     specialItems.Spawnoil();
                 }
+
                 SpawnOil = false;
                 StartCoroutine(ResetSpawnoil());
             }
@@ -89,6 +93,7 @@ public class ProgressPoints : MonoBehaviour
 
         if (currentCheckpoint == expectedNextCheckpoint)
         {
+            // Correct-direction reverse at a checkpoint: stop and switch back to forward without flipping the car.
             if (player != null && player.m_reverse)
             {
                 player.StopReverseAtProgressPoint();
@@ -117,6 +122,14 @@ public class ProgressPoints : MonoBehaviour
 
         if (previousCheckpoint > 0 && currentCheckpoint == expectedPreviousCheckpoint && player != null)
         {
+            // Reverse gear should still stop without flipping.
+            if (player.m_reverse)
+            {
+                player.StopReverseAtProgressPoint();
+                return;
+            }
+
+            // Wrong-way route: flip the car back to the forward direction.
             player.FaceForward();
         }
     }
