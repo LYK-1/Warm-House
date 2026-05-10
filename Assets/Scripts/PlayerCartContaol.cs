@@ -86,12 +86,13 @@ public class PlayerCartContaol : MonoBehaviour
     public Text LapDisplay;
     private int m_participantIndex = -1;
 
+    public GameObject UICanvas;
+
     void Start()
     {
         m_Rigidbody = GetComponent<Rigidbody>();
         m_Rigidbody.centerOfMass = new Vector3(0f, -0.5f, 0f);
         m_Rigidbody.maxAngularVelocity = 5f;
-        // SyncRaceStartState();
         m_participantIndex = ResolveParticipantIndex(transform);
         RegisterParticipantState();
 
@@ -106,10 +107,10 @@ public class PlayerCartContaol : MonoBehaviour
         ReverseCamera.SetActive(false);
         ConfigureLeaderboardDisplay();
 
-        InvokeRepeating("DisplayPosition", 0.2f, 0.2f);
         InvokeRepeating("DisplayLap", 0.2f, 0.2f);
-        DisplayPosition();
+        InvokeRepeating(nameof(DisplayPosition), 0.2f, 0.2f);
         DisplayLap();
+        DisplayPosition();
     }
 
     void FixedUpdate()
@@ -130,7 +131,6 @@ public class PlayerCartContaol : MonoBehaviour
             return;
         }
 
-        // SyncRaceStartState();
         if (!SaveProgress.RaceHasStarted)
         {
             return;
@@ -149,34 +149,12 @@ public class PlayerCartContaol : MonoBehaviour
         {
             speedText.text = currentSpeed.ToString("F0");
         }
+
+        if (SaveProgress.RaCeHasFiniShed)
+        {
+            UICanvas.SetActive(false);
+        }
     }
-
-    /* private void SyncRaceStartState()
-    {
-        if (m_Rigidbody == null)
-        {
-            return;
-        }
-
-        if (!SaveProgress.RaceHasStarted)
-        {
-            if (!m_Rigidbody.isKinematic)
-            {
-                m_Rigidbody.linearVelocity = Vector3.zero;
-                m_Rigidbody.angularVelocity = Vector3.zero;
-                m_Rigidbody.isKinematic = true;
-            }
-
-            return;
-        }
-
-        if (m_Rigidbody.isKinematic)
-        {
-            m_Rigidbody.isKinematic = false;
-            m_Rigidbody.linearVelocity = Vector3.zero;
-            m_Rigidbody.angularVelocity = Vector3.zero;
-        }
-    } */
 
     private void Drive(float acceleration, float brake, Vector2 steer, Vector2 drift)
     {
@@ -1283,7 +1261,12 @@ public class PlayerCartContaol : MonoBehaviour
 
     private string BuildRankText(int localParticipantIndex)
     {
-        int rank = GetCurrentRacePosition(localParticipantIndex);
+        if (!SaveProgress.RaceHasStarted && !SaveProgress.RaCeHasFiniShed)
+        {
+            return "Rank: --";
+        }
+
+        int rank = SaveProgress.GetParticipantRank(localParticipantIndex);
         if (rank <= 0)
         {
             return "Rank: --";
@@ -1355,93 +1338,6 @@ public class PlayerCartContaol : MonoBehaviour
         return -1;
     }
 
-    private int GetCurrentRacePosition(int playerIndex)
-    {
-        if (playerIndex < 0 || playerIndex >= SaveProgress.CurrentCheckpoint.Length)
-        {
-            return 0;
-        }
-
-        float playerScore = GetParticipantRaceScore(playerIndex);
-        if (float.IsNegativeInfinity(playerScore))
-        {
-            return 0;
-        }
-
-        int rank = 1;
-        for (int i = 0; i < SaveProgress.CurrentCheckpoint.Length; i++)
-        {
-            if (i == playerIndex)
-            {
-                continue;
-            }
-
-            float otherScore = GetParticipantRaceScore(i);
-            if (!float.IsNegativeInfinity(otherScore) && otherScore > playerScore + 0.01f)
-            {
-                rank++;
-            }
-        }
-
-        return rank;
-    }
-
-    private float GetParticipantRaceScore(int index)
-    {
-        if (index < 0 || index >= SaveProgress.CurrentCheckpoint.Length)
-        {
-            return float.NegativeInfinity;
-        }
-
-        SaveProgress saveProgress = SaveProgress.Instance;
-        if (saveProgress == null)
-        {
-            return float.NegativeInfinity;
-        }
-
-        int checkpointCount = saveProgress.ProgressPointsItems != null ? saveProgress.ProgressPointsItems.Length : 0;
-        int lap = Mathf.Max(0, SaveProgress.CurrentLap[index]);
-        int checkpoint = Mathf.Max(0, SaveProgress.CurrentCheckpoint[index]);
-
-        if (checkpointCount <= 0)
-        {
-            return lap * 100000f + checkpoint * 100f;
-        }
-
-        int normalizedCheckpoint = checkpoint <= 0 ? 0 : ((checkpoint - 1) % checkpointCount) + 1;
-        float progressWithinCheckpoint = GetCheckpointProgress(index, normalizedCheckpoint, checkpointCount);
-        return lap * 100000f + normalizedCheckpoint * 100f + progressWithinCheckpoint;
-    }
-
-    private float GetCheckpointProgress(int participantIndex, int normalizedCheckpoint, int checkpointCount)
-    {
-        Transform participantTransform = SaveProgress.GetParticipantTransform(participantIndex);
-        if (participantTransform == null || checkpointCount < 2 || normalizedCheckpoint <= 0)
-        {
-            return 0f;
-        }
-
-        ProgressPoints currentPoint = GetProgressPoint(normalizedCheckpoint - 1);
-        ProgressPoints nextPoint = GetProgressPoint(normalizedCheckpoint % checkpointCount);
-        if (currentPoint == null || nextPoint == null)
-        {
-            return 0f;
-        }
-
-        Vector3 segment = nextPoint.transform.position - currentPoint.transform.position;
-        segment.y = 0f;
-        float segmentLengthSqr = segment.sqrMagnitude;
-        if (segmentLengthSqr <= 0.0001f)
-        {
-            return 0f;
-        }
-
-        Vector3 fromCurrent = participantTransform.position - currentPoint.transform.position;
-        fromCurrent.y = 0f;
-        float progress = Vector3.Dot(fromCurrent, segment) / segmentLengthSqr;
-        return Mathf.Clamp01(progress);
-    }
-
     private ProgressPoints GetProgressPoint(int index)
     {
         SaveProgress saveProgress = SaveProgress.Instance;
@@ -1462,69 +1358,6 @@ public class PlayerCartContaol : MonoBehaviour
         }
 
         return pointObject.GetComponent<ProgressPoints>();
-    }
-
-    private Transform GetParticipantTransform(int index)
-    {
-        if (index < 0 || index >= SaveProgress.ParticipantTransforms.Length)
-        {
-            return null;
-        }
-
-        return SaveProgress.GetParticipantTransform(index);
-    }
-
-    private string GetParticipantDisplayName(int index)
-    {
-        if (index < 0 || index >= SaveProgress.ParticipantTags.Length)
-        {
-            return "未知";
-        }
-
-        switch (SaveProgress.ParticipantTags[index])
-        {
-            case "Player1":
-                return "玩家1";
-            case "Player2":
-                return "玩家2";
-            case "Player3":
-                return "玩家3";
-            case "Player4":
-                return "玩家4";
-            case "AI1":
-                return "AI1";
-            case "AI2":
-                return "AI2";
-            case "AI3":
-                return "AI3";
-            default:
-                return SaveProgress.ParticipantTags[index];
-        }
-    }
-
-    private string FormatPosition(int position)
-    {
-        if (position <= 0)
-        {
-            return "--";
-        }
-
-        if (position % 100 >= 11 && position % 100 <= 13)
-        {
-            return position + "th";
-        }
-
-        switch (position % 10)
-        {
-            case 1:
-                return position + "st";
-            case 2:
-                return position + "nd";
-            case 3:
-                return position + "rd";
-            default:
-                return position + "th";
-        }
     }
 
     public void FaceForward()

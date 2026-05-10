@@ -108,19 +108,9 @@ public class ProgressPoints : MonoBehaviour
             {
                 SaveProgress.CurrentLap[kartIndex] = Mathf.Min(SaveProgress.CurrentLap[kartIndex] + 1, SaveProgress.MaxLaps);
 
-                if (player != null && SaveProgress.CurrentLap[kartIndex] >= SaveProgress.MaxLaps)
+                if (SaveProgress.CurrentLap[kartIndex] >= SaveProgress.MaxLaps)
                 {
-                    if (!SaveProgress.RaCeHasFiniShed)
-                    {
-                        SaveProgress.RaCeHasFiniShed = true;
-                        SaveProgress.RaceHasStarted = false;
-
-                        if (player != null)
-                        {
-                            player.BeginFinishSequence();
-                        }
-                    }
-
+                    TriggerRaceFinish();
                     SaveProgress.CurrentCheckpoint[kartIndex] = currentCheckpoint;
                     return;
                 }
@@ -163,6 +153,44 @@ public class ProgressPoints : MonoBehaviour
     private int ResolveKartIndex(Transform current)
     {
         return PlayerCartContaol.ResolveParticipantIndex(current);
+    }
+
+    private void TriggerRaceFinish()
+    {
+        if (SaveProgress.RaCeHasFiniShed)
+        {
+            return;
+        }
+
+        SaveProgress.RaCeHasFiniShed = true;
+        SaveProgress.RaceHasStarted = false;
+
+        for (int i = 0; i < SaveProgress.ParticipantTransforms.Length; i++)
+        {
+            Transform participantTransform = SaveProgress.GetParticipantTransform(i);
+            if (participantTransform == null)
+            {
+                continue;
+            }
+
+            PlayerCartContaol player = participantTransform.GetComponentInParent<PlayerCartContaol>();
+            if (player != null)
+            {
+                player.BeginFinishSequence();
+                continue;
+            }
+
+            AIKartControl aiKart = participantTransform.GetComponentInParent<AIKartControl>();
+            if (aiKart != null)
+            {
+                aiKart.BeginFinishSequence();
+            }
+        }
+
+        if (SaveProgress.Instance != null)
+        {
+            SaveProgress.Instance.QueueFinishDisplay();
+        }
     }
 
     IEnumerator ResetSpawnBomb()

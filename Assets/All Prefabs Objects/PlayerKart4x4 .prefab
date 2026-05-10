@@ -7048,6 +7048,7 @@ MonoBehaviour:
   ReverseCamera: {fileID: 6907518527017365839}
   PositionDisplay: {fileID: 9040231449907105087}
   LapDisplay: {fileID: 4224494199429728623}
+  UICanvas: {fileID: 7864702298836779154}
 --- !u!114 &894295882259213484
 MonoBehaviour:
   m_ObjectHideFlags: 0

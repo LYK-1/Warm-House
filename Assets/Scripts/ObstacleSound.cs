@@ -400,7 +400,7 @@ public class ObstacleSound : MonoBehaviour
 
     IEnumerator PlayerReact()
     {
-        m_rigidbody.constraints = RigidbodyConstraints.FreezeRotationX |RigidbodyConstraints.FreezeRotationZ;
+        m_rigidbody.constraints = RigidbodyConstraints.FreezeRotationX |RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezeRotationY;
         yield return new WaitForSeconds(1);
         m_rigidbody.constraints = RigidbodyConstraints.None;
     }
