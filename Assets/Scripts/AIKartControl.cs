@@ -14,6 +14,13 @@ public class AIKartControl : MonoBehaviour
     private bool m_isFinishing;
 
     private bool m_raceHasBegun;
+
+    private void Awake()
+    {
+        AIWaypoints[0] = GameObject.FindGameObjectWithTag("AIWaypoint1").transform;
+        AIWaypoints[1] = GameObject.FindGameObjectWithTag("AIWaypoint2").transform;
+        AIWaypoints[2] = GameObject.FindGameObjectWithTag("AIWaypoint3").transform;
+    }
     void Start(){
         m_agent = GetComponent<NavMeshAgent>();
         m_participantIndex = ResolveParticipantIndex(transform);

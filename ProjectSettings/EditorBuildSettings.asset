@@ -6,8 +6,20 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/SampleScene.unity
-    guid: 99c9720ab356a0642a771bea13969a05
+    path: Assets/Scenes/MainMenu.unity
+    guid: 4ed9a10a2e9d10c4e8f6a00caee674f3
+  - enabled: 1
+    path: Assets/Scenes/TrackSelection.unity
+    guid: 627a9bc96f54c44479720dbbe7dcc208
+  - enabled: 1
+    path: Assets/Scenes/Premade/Race track 1 Forest.unity
+    guid: 0a092e99a03f64e4bab7136f42ce25d9
+  - enabled: 1
+    path: Assets/Scenes/Premade/Race track 2 Snow.unity
+    guid: 865bee1854109154a90cc8c5779ae758
+  - enabled: 1
+    path: Assets/Scenes/Premade/Race Track 3 - desert.unity
+    guid: f4e860b9d4c0ad84685a296e50d2aa39
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

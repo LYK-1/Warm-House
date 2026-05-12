@@ -16,10 +16,10 @@ public class ProgressPoints : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        PlayerCartContaol player = other.GetComponentInParent<PlayerCartContaol>();
+        PlayerCartControl player = other.GetComponentInParent<PlayerCartControl>();
         if (player != null)
         {
-            HandleProgressPoint(PlayerCartContaol.ResolveParticipantIndex(player.transform), player.transform, player, null);
+            HandleProgressPoint(PlayerCartControl.ResolveParticipantIndex(player.transform), player.transform, player, null);
             return;
         }
 
@@ -63,7 +63,7 @@ public class ProgressPoints : MonoBehaviour
         HandleProgressPoint(kartIndex, other.transform, null, null);
     }
 
-    private void HandleProgressPoint(int kartIndex, Transform current, PlayerCartContaol player, AIKartControl aiKart)
+    private void HandleProgressPoint(int kartIndex, Transform current, PlayerCartControl player, AIKartControl aiKart)
     {
         if (kartIndex < 0 || kartIndex >= SaveProgress.CurrentCheckpoint.Length || current == null)
         {
@@ -152,7 +152,7 @@ public class ProgressPoints : MonoBehaviour
 
     private int ResolveKartIndex(Transform current)
     {
-        return PlayerCartContaol.ResolveParticipantIndex(current);
+        return PlayerCartControl.ResolveParticipantIndex(current);
     }
 
     private void TriggerRaceFinish()
@@ -173,7 +173,7 @@ public class ProgressPoints : MonoBehaviour
                 continue;
             }
 
-            PlayerCartContaol player = participantTransform.GetComponentInParent<PlayerCartContaol>();
+            PlayerCartControl player = participantTransform.GetComponentInParent<PlayerCartControl>();
             if (player != null)
             {
                 player.BeginFinishSequence();

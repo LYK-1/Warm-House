@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 public class SpeedTextUI : MonoBehaviour
 {
-    private PlayerCartContaol m_Target;
+    private PlayerCartControl m_Target;
     private Text m_Text;
     private float m_NextSearchTime;
 
@@ -21,7 +21,7 @@ public class SpeedTextUI : MonoBehaviour
 
         if (m_Target == null && Time.unscaledTime >= m_NextSearchTime)
         {
-            m_Target = FindFirstObjectByType<PlayerCartContaol>();
+            m_Target = FindFirstObjectByType<PlayerCartControl>();
             m_NextSearchTime = Time.unscaledTime + 0.5f;
         }
 
