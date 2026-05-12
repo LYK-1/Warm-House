@@ -889,6 +889,8 @@ MonoBehaviour:
   PositionDisplay: {fileID: 5673474200862855130}
   LapDisplay: {fileID: 6948267042168889795}
   UICanvas: {fileID: 4460154270364292932}
+  Brain: {fileID: 3051034672098643398}
+  canvasObject: {fileID: 6496931875088034408}
 --- !u!54 &3019310783155182568
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -2083,7 +2085,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &5485326979688098130
 Transform:
   m_ObjectHideFlags: 0
@@ -2348,7 +2350,7 @@ Transform:
   m_GameObject: {fileID: 3646719691687534045}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 8.895119, y: 9.364853, z: -17.939339}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -2388,7 +2390,7 @@ MonoBehaviour:
   m_DefaultControlScheme: 
   m_DefaultActionMap: Drive
   m_SplitScreenIndex: -1
-  m_Camera: {fileID: 0}
+  m_Camera: {fileID: 7206002657537633749}
 --- !u!1 &3718634801903122882
 GameObject:
   m_ObjectHideFlags: 0
@@ -2988,8 +2990,8 @@ Canvas:
   m_GameObject: {fileID: 4460154270364292932}
   m_Enabled: 1
   serializedVersion: 3
-  m_RenderMode: 0
-  m_Camera: {fileID: 0}
+  m_RenderMode: 1
+  m_Camera: {fileID: 7206002657537633749}
   m_PlaneDistance: 100
   m_PixelPerfect: 0
   m_ReceivesEvents: 1

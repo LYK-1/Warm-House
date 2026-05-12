@@ -17,7 +17,7 @@ public class SaveProgress : MonoBehaviour
     private int m_resetAmounts;
     public static int LapNumber;
 
-    public static int[] PlayerlItemsAmounts = new int[4] { 10, 10 ,10, 10 };
+    public static int[] PlayerlItemsAmounts = new int[4] { 10, 30 ,20, 10 };
 
     public static bool RaceHasStarted;
     public static int MaxLaps = 1;

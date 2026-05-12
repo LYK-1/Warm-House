@@ -21,7 +21,11 @@ public class SpeedTextUI : MonoBehaviour
 
         if (m_Target == null && Time.unscaledTime >= m_NextSearchTime)
         {
-            m_Target = FindFirstObjectByType<PlayerCartControl>();
+            m_Target = GetComponentInParent<PlayerCartControl>();
+            if (m_Target == null)
+            {
+                m_Target = FindFirstObjectByType<PlayerCartControl>();
+            }
             m_NextSearchTime = Time.unscaledTime + 0.5f;
         }
 

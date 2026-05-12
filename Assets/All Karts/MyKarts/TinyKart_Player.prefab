@@ -3032,7 +3032,7 @@ Transform:
   m_GameObject: {fileID: 5234426557940930828}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 4.415118, y: 9.364853, z: -17.939339}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -3072,7 +3072,7 @@ MonoBehaviour:
   m_DefaultControlScheme: 
   m_DefaultActionMap: Drive
   m_SplitScreenIndex: -1
-  m_Camera: {fileID: 0}
+  m_Camera: {fileID: 6542305200544377310}
 --- !u!1 &5330201981194397511
 GameObject:
   m_ObjectHideFlags: 0
@@ -3376,8 +3376,8 @@ Canvas:
   m_GameObject: {fileID: 5453553284281688682}
   m_Enabled: 1
   serializedVersion: 3
-  m_RenderMode: 0
-  m_Camera: {fileID: 0}
+  m_RenderMode: 1
+  m_Camera: {fileID: 6542305200544377310}
   m_PlaneDistance: 100
   m_PixelPerfect: 0
   m_ReceivesEvents: 1
@@ -8406,6 +8406,8 @@ MonoBehaviour:
   PositionDisplay: {fileID: 3266200577601978516}
   LapDisplay: {fileID: 3987248839704807988}
   UICanvas: {fileID: 5453553284281688682}
+  Brain: {fileID: 1364039573082655642}
+  canvasObject: {fileID: 5322998492205447310}
 --- !u!54 &4416484217886889623
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -8449,7 +8451,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &5960832298290514094
 Transform:
   m_ObjectHideFlags: 0
@@ -10232,9 +10234,9 @@ RectTransform:
   - {fileID: 7194949472293730448}
   m_Father: {fileID: 6770186966035302893}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -450}
+  m_AnchorMin: {x: 0.5, y: 0}
+  m_AnchorMax: {x: 0.5, y: 0}
+  m_AnchoredPosition: {x: 0, y: 90}
   m_SizeDelta: {x: 800, y: 200}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8246599030198247520

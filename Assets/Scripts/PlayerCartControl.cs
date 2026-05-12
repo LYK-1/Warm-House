@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
+using Unity.Cinemachine;
 
 public class PlayerCartControl : MonoBehaviour
 {
@@ -88,6 +89,16 @@ public class PlayerCartControl : MonoBehaviour
 
     public GameObject UICanvas;
 
+    public CinemachineBrain Brain;
+    public ICinemachineCamera CamA;
+    public ICinemachineCamera CamB;
+    public Canvas canvasObject;
+
+    private void Awake()
+    {
+        Invoke("ChangeCameras", 0.05f);
+    }
+
     void Start()
     {
         m_Rigidbody = GetComponent<Rigidbody>();
@@ -153,6 +164,18 @@ public class PlayerCartControl : MonoBehaviour
         if (SaveProgress.RaCeHasFiniShed)
         {
             UICanvas.SetActive(false);
+        }
+    }
+
+    void ChangeCameras()
+    {
+        if (SaveScript.MultiPlayerMode)
+        {
+            CamA = ForwardCamera.GetComponent<CinemachineCamera>();
+            CamB = ForwardCamera.GetComponent<CinemachineCamera>();
+            Brain.SetCameraOverride(1, 1, CamA, CamB, 1, 1);
+            canvasObject.renderMode = RenderMode.ScreenSpaceCamera;
+            canvasObject.worldCamera = Brain.GetComponent<Camera>();
         }
     }
 
@@ -430,10 +453,22 @@ public class PlayerCartControl : MonoBehaviour
         if (m_camReverse)
         {
             SetForwardCameraActive();
+            if (SaveScript.MultiPlayerMode)
+            {
+                CamA = ForwardCamera.GetComponent<CinemachineCamera>();
+                CamB = ForwardCamera.GetComponent<CinemachineCamera>();
+                Brain.SetCameraOverride(1, 1, CamA, CamB, 1, 1);
+            }
         }
         else if (!m_camReverse)
         {
             SetReverseCameraActive();
+            if (SaveScript.MultiPlayerMode)
+            {
+                CamA = ReverseCamera.GetComponent<CinemachineCamera>();
+                CamB = ReverseCamera.GetComponent<CinemachineCamera>();
+                Brain.SetCameraOverride(1, 1, CamA, CamB, 1, 1);
+            }
         }
     }
 

@@ -147,7 +147,16 @@ public class ProgressPoints : MonoBehaviour
             return 0;
         }
 
-        return saveProgress.ProgressPointsItems.Length;
+        int checkpointCount = 0;
+        foreach (GameObject pointObject in saveProgress.ProgressPointsItems)
+        {
+            if (pointObject != null)
+            {
+                checkpointCount++;
+            }
+        }
+
+        return checkpointCount;
     }
 
     private int ResolveKartIndex(Transform current)

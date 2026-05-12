@@ -17,6 +17,7 @@ public class KartSounds : MonoBehaviour
     [Range(0.1f, 2.0f)] public float ReverseSoundMaxPitch = 1.5f;
 
     private Rigidbody m_Rigidbody;
+    private PlayerCartControl m_PlayerCartControl;
     private float m_kartSpeed;
     private Renderer m_TailLightRenderer;  // 缓存 Renderer
 
@@ -30,6 +31,7 @@ public class KartSounds : MonoBehaviour
     void Start()
     {
         m_Rigidbody = GetComponent<Rigidbody>();
+        m_PlayerCartControl = GetComponent<PlayerCartControl>();
 
         for (int i = 0; i < TireSmoke.Length; i++)
         {
@@ -39,12 +41,25 @@ public class KartSounds : MonoBehaviour
 
         // 缓存 Renderer，用 sharedMaterial 避免创建临时实例
         m_TailLightRenderer = TailLights.GetComponent<Renderer>();
-        m_TailLightRenderer.sharedMaterial.DisableKeyword("_EMISSION");
+        if (m_TailLightRenderer != null)
+        {
+            m_TailLightRenderer.material.DisableKeyword("_EMISSION");
+        }
+
+        MuteAndStopAudioSources();
     }
 
     void Update()
     {
         m_kartSpeed = m_Rigidbody.linearVelocity.magnitude * 2.23693629f / 100;
+
+        if (!IsKartGrounded() || m_kartSpeed <= 0.01f)
+        {
+            MuteAndStopAudioSources();
+            return;
+        }
+
+        EnsureAudioSourcesPlaying();
         PlayIdleSound();
         PlayDrivingSound();
         PlayReversingSound();
@@ -106,12 +121,18 @@ public class KartSounds : MonoBehaviour
         if (button.isPressed)
         {
             BrakeToAStop = true;
-            m_TailLightRenderer.sharedMaterial.EnableKeyword("_EMISSION");
+            if (m_TailLightRenderer != null)
+            {
+                m_TailLightRenderer.material.EnableKeyword("_EMISSION");
+            }
         }
         else
         {
             BrakeToAStop = false;
-            m_TailLightRenderer.sharedMaterial.DisableKeyword("_EMISSION");
+            if (m_TailLightRenderer != null)
+            {
+                m_TailLightRenderer.material.DisableKeyword("_EMISSION");
+            }
         }
     }
 
@@ -141,6 +162,70 @@ public class KartSounds : MonoBehaviour
                     TireSmoke[i].Stop();
                 }
             }
+        }
+    }
+
+    private bool IsKartGrounded()
+    {
+        if (m_PlayerCartControl == null || m_PlayerCartControl.WheelColliders == null)
+        {
+            return true;
+        }
+
+        for (int i = 0; i < m_PlayerCartControl.WheelColliders.Length; i++)
+        {
+            WheelCollider wheelCollider = m_PlayerCartControl.WheelColliders[i];
+            if (wheelCollider == null)
+            {
+                continue;
+            }
+
+            WheelHit wheelHit;
+            if (wheelCollider.GetGroundHit(out wheelHit) && wheelHit.normal != Vector3.zero)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void EnsureAudioSourcesPlaying()
+    {
+        PlayLoopingSource(IdleSound);
+        PlayLoopingSource(DrivingSound);
+        PlayLoopingSource(DriftSound);
+        PlayLoopingSource(ReverseSound);
+    }
+
+    private void MuteAndStopAudioSources()
+    {
+        MuteAndStopAudioSource(IdleSound);
+        MuteAndStopAudioSource(DrivingSound);
+        MuteAndStopAudioSource(DriftSound);
+        MuteAndStopAudioSource(ReverseSound);
+        MuteAndStopAudioSource(StartSound);
+    }
+
+    private void PlayLoopingSource(AudioSource source)
+    {
+        if (source != null && !source.isPlaying)
+        {
+            source.Play();
+        }
+    }
+
+    private void MuteAndStopAudioSource(AudioSource source)
+    {
+        if (source == null)
+        {
+            return;
+        }
+
+        source.volume = 0.0f;
+        if (source.isPlaying)
+        {
+            source.Stop();
         }
     }
 }
