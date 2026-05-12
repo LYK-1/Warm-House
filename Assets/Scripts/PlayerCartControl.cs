@@ -104,7 +104,7 @@ public class PlayerCartControl : MonoBehaviour
             m_gearNumber++;
             m_driveTorqueGear[i] = DriveTorque + (MaxSpeed / 10f * m_gearNumber);
         }
-        ReverseCamera.SetActive(false);
+        SetReverseCameraActive();
         ConfigureLeaderboardDisplay();
 
         InvokeRepeating("DisplayLap", 0.2f, 0.2f);
@@ -274,7 +274,10 @@ public class PlayerCartControl : MonoBehaviour
     {
         bool anyGrounded = false;
 
-        for (int i = 2; i < WheelColliders.Length; ++i)
+        // All wheels count for grounding. Checking only the rear wheels caused
+        // false airborne states on uneven ground, which then toggled rigidbody
+        // constraints and made the camera look jittery.
+        for (int i = 0; i < WheelColliders.Length; ++i)
         {
             WheelHit wheelhit;
             WheelColliders[i].GetGroundHit(out wheelhit);
@@ -300,9 +303,24 @@ public class PlayerCartControl : MonoBehaviour
     public IEnumerator SetConstraints()
     {
         yield return new WaitForSeconds(0.1f);
+        if (isResetting || m_grounded)
+        {
+            constraintCoroutine = null;
+            yield break;
+        }
+
         m_Rigidbody.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-        yield return new WaitForSeconds(0.3f);
-        m_Rigidbody.constraints = RigidbodyConstraints.None;
+
+        while (!isResetting && !m_grounded)
+        {
+            yield return new WaitForFixedUpdate();
+        }
+
+        if (!isResetting)
+        {
+            m_Rigidbody.constraints = RigidbodyConstraints.None;
+        }
+
         constraintCoroutine = null;
     }
 

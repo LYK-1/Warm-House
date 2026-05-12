@@ -62,8 +62,6 @@ public class RaceStart : MonoBehaviour
     IEnumerator Countdown()
     {
         Title.text = "";
-        StartText.text = "Get Ready";
-        yield return new WaitForSeconds(1);
         StartText.text = "3";
         yield return new WaitForSeconds(1);
         StartText.text = "2";
