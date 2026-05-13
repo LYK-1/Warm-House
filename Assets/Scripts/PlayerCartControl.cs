@@ -174,9 +174,78 @@ public class PlayerCartControl : MonoBehaviour
             CamA = ForwardCamera.GetComponent<CinemachineCamera>();
             CamB = ForwardCamera.GetComponent<CinemachineCamera>();
             Brain.SetCameraOverride(1, 1, CamA, CamB, 1, 1);
-            canvasObject.renderMode = RenderMode.ScreenSpaceCamera;
-            canvasObject.worldCamera = Brain.GetComponent<Camera>();
+            Canvas hudCanvas = ResolveHudCanvas();
+            if (hudCanvas != null && Brain != null)
+            {
+                hudCanvas.renderMode = RenderMode.ScreenSpaceCamera;
+                hudCanvas.worldCamera = Brain.GetComponent<Camera>();
+            }
+
+            if (IsTwoPlayerSplitScreen())
+            {
+                ApplySplitScreenHudScaling();
+            }
         }
+    }
+
+    private bool IsTwoPlayerSplitScreen()
+    {
+        return SaveScript.MultiPlayerMode && SaveScript.MultiPlayerAmount == 2;
+    }
+
+    private Canvas ResolveHudCanvas()
+    {
+        if (canvasObject != null)
+        {
+            return canvasObject;
+        }
+
+        if (UICanvas != null)
+        {
+            canvasObject = UICanvas.GetComponent<Canvas>();
+            if (canvasObject != null)
+            {
+                return canvasObject;
+            }
+
+            canvasObject = UICanvas.GetComponentInChildren<Canvas>(true);
+            if (canvasObject != null)
+            {
+                return canvasObject;
+            }
+        }
+
+        canvasObject = GetComponentInChildren<Canvas>(true);
+        return canvasObject;
+    }
+
+    private void ApplySplitScreenHudScaling()
+    {
+        if (!IsTwoPlayerSplitScreen())
+        {
+            return;
+        }
+
+        Canvas hudCanvas = ResolveHudCanvas();
+        if (hudCanvas == null)
+        {
+            return;
+        }
+
+        CanvasScaler scaler = hudCanvas.GetComponent<CanvasScaler>();
+        if (scaler == null)
+        {
+            return;
+        }
+
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+        scaler.matchWidthOrHeight = 0f;
+    }
+
+    private bool IsPrimaryPlayer()
+    {
+        return GetParticipantIndex() == 0;
     }
 
     private void Drive(float acceleration, float brake, Vector2 steer, Vector2 drift)
@@ -349,6 +418,11 @@ public class PlayerCartControl : MonoBehaviour
 
     public void OnAccelerate(InputValue value)
     {
+        if (!IsPrimaryPlayer())
+        {
+            return;
+        }
+
         if (!SaveProgress.RaceHasStarted)
         {
             m_gas = 0f;
@@ -360,6 +434,11 @@ public class PlayerCartControl : MonoBehaviour
 
     public void OnBrake(InputValue button)
     {
+        if (!IsPrimaryPlayer())
+        {
+            return;
+        }
+
         if (!SaveProgress.RaceHasStarted)
         {
             m_brake = 0f;
@@ -386,6 +465,11 @@ public class PlayerCartControl : MonoBehaviour
 
     public void OnDrift(InputValue value)
     {
+        if (!IsPrimaryPlayer())
+        {
+            return;
+        }
+
         if (!SaveProgress.RaceHasStarted)
         {
             m_drift = Vector2.zero;
@@ -397,6 +481,11 @@ public class PlayerCartControl : MonoBehaviour
 
     public void OnReverse(InputValue button)
     {
+        if (!IsPrimaryPlayer())
+        {
+            return;
+        }
+
         if (!SaveProgress.RaceHasStarted)
         {
             return;
@@ -419,6 +508,11 @@ public class PlayerCartControl : MonoBehaviour
     }
     public void OnSteering(InputValue value)
     {
+        if (!IsPrimaryPlayer())
+        {
+            return;
+        }
+
         if (!SaveProgress.RaceHasStarted)
         {
             m_steering = Vector2.zero;
@@ -430,6 +524,11 @@ public class PlayerCartControl : MonoBehaviour
 
     public void OnReset(InputValue button)
     {
+        if (!IsPrimaryPlayer())
+        {
+            return;
+        }
+
         if (SaveProgress.RaCeHasFiniShed)
         {
             return;
@@ -445,6 +544,11 @@ public class PlayerCartControl : MonoBehaviour
 
     public void OnCameraChange(InputValue button)
     {
+        if (!IsPrimaryPlayer())
+        {
+            return;
+        }
+
         if (m_isFinishing || SaveProgress.RaCeHasFiniShed)
         {
             return;

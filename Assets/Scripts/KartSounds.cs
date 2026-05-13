@@ -118,6 +118,11 @@ public class KartSounds : MonoBehaviour
 
     public void OnBrake(InputValue button)
     {
+        if (m_PlayerCartControl == null || m_PlayerCartControl.ParticipantIndex != 0)
+        {
+            return;
+        }
+
         if (button.isPressed)
         {
             BrakeToAStop = true;
@@ -138,6 +143,11 @@ public class KartSounds : MonoBehaviour
 
     public void OnDrift(InputValue value)
     {
+        if (m_PlayerCartControl == null || m_PlayerCartControl.ParticipantIndex != 0)
+        {
+            return;
+        }
+
         m_drift = value.Get<Vector2>();
         if (m_drift.x>0)
         {

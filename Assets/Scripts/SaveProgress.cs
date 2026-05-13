@@ -20,6 +20,7 @@ public class SaveProgress : MonoBehaviour
     public static int[] PlayerlItemsAmounts = new int[4] { 10, 30 ,20, 10 };
 
     public static bool RaceHasStarted;
+    public int TotalLaps = 1;
     public static int MaxLaps = 1;
     public static bool RaCeHasFiniShed;
 
@@ -33,6 +34,23 @@ public class SaveProgress : MonoBehaviour
     private void Awake()
     {
         Instance = this;
+        for (int i = 0; i < CurrentLap.Length; i++)
+        {
+            CurrentLap[i] = 0;
+        }
+        for (int i = 0; i < CurrentCheckpoint.Length; i++)
+        {
+            CurrentCheckpoint[i] = 0;
+        }
+        PlayerlItemsAmounts[0] = 10;
+        PlayerlItemsAmounts[1] = 30;
+        PlayerlItemsAmounts[2] = 20;
+        PlayerlItemsAmounts[3] = 10;
+        Reset = false;
+        LapNumber = 1;
+        RaceHasStarted = false;
+        RaCeHasFiniShed = false;
+        MaxLaps = Mathf.Max(1, TotalLaps);
     }
 
     private void OnEnable()

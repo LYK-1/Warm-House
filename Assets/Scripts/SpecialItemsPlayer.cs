@@ -24,15 +24,21 @@ public class SpecialItemsPlayer : MonoBehaviour
 
     private bool m_boxingGloveRightBusy;
     private bool m_boxingGloveLeftBusy;
+    private RectTransform m_specialItemsRoot;
+    private Vector2 m_specialItemsBaseAnchoredPosition;
+    [SerializeField] private float TwoPlayerSpecialItemsYOffset = -40f;
 
     private void Awake()
     {
         ResolveOilSpawnPoint();
+        CacheSpecialItemsRoot();
+        ApplySpecialItemsLayout();
     }
 
     void Start()
     {
         ResolveOilSpawnPoint();
+        ApplySpecialItemsLayout();
 
         if (SpecialItemsDisplay != null && SpecialItems != null && SpecialItems.Length > 0)
         {
@@ -63,6 +69,68 @@ public class SpecialItemsPlayer : MonoBehaviour
         {
             ItemAmounts[0].gameObject.SetActive(true);
         }
+    }
+
+    private void CacheSpecialItemsRoot()
+    {
+        if (m_specialItemsRoot != null)
+        {
+            return;
+        }
+
+        if (SpecialItemsDisplay != null)
+        {
+            m_specialItemsRoot = SpecialItemsDisplay.rectTransform;
+            if (m_specialItemsRoot != null)
+            {
+                m_specialItemsBaseAnchoredPosition = m_specialItemsRoot.anchoredPosition;
+                return;
+            }
+        }
+
+        m_specialItemsRoot = GetComponentInChildren<RectTransform>(true);
+        if (m_specialItemsRoot != null)
+        {
+            m_specialItemsBaseAnchoredPosition = m_specialItemsRoot.anchoredPosition;
+        }
+    }
+
+    private void ApplySpecialItemsLayout()
+    {
+        CacheSpecialItemsRoot();
+        if (m_specialItemsRoot == null)
+        {
+            return;
+        }
+
+        Vector2 targetPosition = m_specialItemsBaseAnchoredPosition;
+        if (IsTwoPlayerMode())
+        {
+            targetPosition.y += TwoPlayerSpecialItemsYOffset;
+        }
+
+        m_specialItemsRoot.anchoredPosition = targetPosition;
+    }
+
+    private bool IsTwoPlayerMode()
+    {
+        return SaveScript.MultiPlayerMode && SaveScript.MultiPlayerAmount == 2;
+    }
+
+    private int GetParticipantIndex()
+    {
+        PlayerCartControl playerCartControl = GetComponent<PlayerCartControl>();
+        if (playerCartControl == null)
+        {
+            playerCartControl = GetComponentInParent<PlayerCartControl>();
+        }
+
+        if (playerCartControl == null)
+        {
+            return -1;
+        }
+
+        return playerCartControl.ParticipantIndex;
     }
 
     IEnumerator SwitchoffBoxingGloveRight()
@@ -118,6 +186,11 @@ public class SpecialItemsPlayer : MonoBehaviour
 
     public void OnSpecialItemRight(InputValue button)
     {
+        if (GetParticipantIndex() != 0)
+        {
+            return;
+        }
+
         if (m_specialItemID == 0)
         {
             if (m_boxingGloveRightBusy || BoxingGloveRight == null || !TryConsumeSpecialItem(0))
@@ -159,6 +232,11 @@ public class SpecialItemsPlayer : MonoBehaviour
 
     public void OnSpecialItemLeft(InputValue button)
     {
+        if (GetParticipantIndex() != 0)
+        {
+            return;
+        }
+
         if (m_specialItemID == 0)
         {
             if (m_boxingGloveLeftBusy || BoxingGloveLeft == null || !TryConsumeSpecialItem(0))
@@ -200,6 +278,11 @@ public class SpecialItemsPlayer : MonoBehaviour
 
     public void OnSpecialItemChoose(InputValue button)
     {
+        if (GetParticipantIndex() != 0)
+        {
+            return;
+        }
+
         if (SpecialItems == null || SpecialItems.Length == 0)
         {
             return;
