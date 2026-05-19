@@ -135,7 +135,7 @@ public class ObstacleSound : MonoBehaviour
             }
         }
 
-        if (collision.gameObject.CompareTag("Player1"))
+        if (IsPlayerTag(collision.gameObject))
         {
             if (collision.gameObject.CompareTag("Glove"))
             {
@@ -379,6 +379,19 @@ public class ObstacleSound : MonoBehaviour
         m_agent.speed = 25;
         m_isOilContact = false;
         m_oilSpinCoroutine = null;
+    }
+
+    private bool IsPlayerTag(GameObject target)
+    {
+        if (target == null)
+        {
+            return false;
+        }
+
+        return target.CompareTag("Player1")
+            || target.CompareTag("Player2")
+            || target.CompareTag("Player3")
+            || target.CompareTag("Player4");
     }
 
     private float GetRemainingOilSpinDuration()

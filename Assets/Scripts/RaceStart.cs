@@ -14,6 +14,9 @@ public class RaceStart : MonoBehaviour
     public GameObject[] AIKarts;
     public Transform[] AISpawnPoints;
 
+    private static readonly string[] PlayerParticipantTags = new string[4] { "Player1", "Player2", "Player3", "Player4" };
+    private static readonly string[] AIPlayerTags = new string[3] { "AI1", "AI2", "AI3" };
+
     private readonly List<PlayerCartControl> m_playerControllers = new List<PlayerCartControl>();
 
     IEnumerator Start()
@@ -93,7 +96,8 @@ public class RaceStart : MonoBehaviour
                 continue;
             }
 
-            Instantiate(kartPrefab, spawnPoint.position, spawnPoint.rotation);
+            GameObject kartInstance = Instantiate(kartPrefab, spawnPoint.position, spawnPoint.rotation);
+            ApplyParticipantTag(kartInstance, PlayerParticipantTags[i]);
         }
 
         int aiCount = SaveScript.SinglePlayerMode ? 3 : Mathf.Max(0, 4 - spawnCount);
@@ -116,7 +120,7 @@ public class RaceStart : MonoBehaviour
             return;
         }
 
-        int spawnCount = Mathf.Min(aiCount, AISpawnPoints.Length);
+        int spawnCount = Mathf.Min(Mathf.Min(aiCount, AISpawnPoints.Length), AIPlayerTags.Length);
         for (int i = 0; i < spawnCount; i++)
         {
             if (!TryGetSpawnPoint(AISpawnPoints, i, "AI", out Transform spawnPoint))
@@ -132,7 +136,26 @@ public class RaceStart : MonoBehaviour
                 continue;
             }
 
-            Instantiate(kartPrefab, spawnPoint.position, spawnPoint.rotation);
+            GameObject kartInstance = Instantiate(kartPrefab, spawnPoint.position, spawnPoint.rotation);
+            ApplyParticipantTag(kartInstance, AIPlayerTags[i]);
+        }
+    }
+
+    private void ApplyParticipantTag(GameObject kartInstance, string participantTag)
+    {
+        if (kartInstance == null || string.IsNullOrEmpty(participantTag))
+        {
+            return;
+        }
+
+        Transform[] transforms = kartInstance.GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < transforms.Length; i++)
+        {
+            Transform node = transforms[i];
+            if (node != null)
+            {
+                node.gameObject.tag = participantTag;
+            }
         }
     }
 
