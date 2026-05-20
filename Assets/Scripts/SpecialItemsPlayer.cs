@@ -330,6 +330,23 @@ public class SpecialItemsPlayer : MonoBehaviour
         }
     }
 
+    public static void RefreshAllItemAmounts()
+    {
+        SpecialItemsPlayer[] players = Object.FindObjectsByType<SpecialItemsPlayer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        if (players == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < players.Length; i++)
+        {
+            if (players[i] != null)
+            {
+                players[i].ItemAmountsUpdate();
+            }
+        }
+    }
+
     private void ResolveOilSpawnPoint()
     {
         if (OilSpawnPoint != null)

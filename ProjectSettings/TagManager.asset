@@ -21,6 +21,8 @@ TagManager:
   - Player3
   - Player4
   - Oil
+  - AIWaypoint4
+  - prop
   layers:
   - Default
   - TransparentFX

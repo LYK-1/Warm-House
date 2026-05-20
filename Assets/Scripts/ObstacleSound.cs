@@ -96,6 +96,11 @@ public class ObstacleSound : MonoBehaviour
     }      
 
     private void OnTriggerEnter(Collider collision){
+        if (IsPropContact(collision))
+        {
+            return;
+        }
+
         if (collision.gameObject.CompareTag("Glove"))
         {
             StartBoxingGloveSpin();
@@ -166,6 +171,11 @@ public class ObstacleSound : MonoBehaviour
 
     private void OnTriggerStay(Collider collision)
     {
+        if (IsPropContact(collision))
+        {
+            return;
+        }
+
         if (collision.gameObject.CompareTag("Oil"))
         {
             m_currentOilScript = collision.GetComponent<OilScript>();
@@ -180,6 +190,11 @@ public class ObstacleSound : MonoBehaviour
     }
 
     private void OnTriggerExit(Collider collision){
+        if (IsPropContact(collision))
+        {
+            return;
+        }
+
         if (collision.gameObject.CompareTag("Obstacle")){
             if(m_hasHit){
                 m_hasHit = false;
@@ -392,6 +407,27 @@ public class ObstacleSound : MonoBehaviour
             || target.CompareTag("Player2")
             || target.CompareTag("Player3")
             || target.CompareTag("Player4");
+    }
+
+    private bool IsPropContact(Collider collision)
+    {
+        if (collision == null)
+        {
+            return false;
+        }
+
+        Transform cursor = collision.transform;
+        while (cursor != null)
+        {
+            if (cursor.tag == "prop")
+            {
+                return true;
+            }
+
+            cursor = cursor.parent;
+        }
+
+        return false;
     }
 
     private float GetRemainingOilSpinDuration()

@@ -1,35 +1,52 @@
-using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
 
 public class AIKartControl : MonoBehaviour
 {
+    private const int WaypointCount = 4;
+    private const string WaypointRootName = "AI waypoints";
+    private const float WaypointAdvanceDistance = 3f;
+
     private NavMeshAgent m_agent;
     private int m_currentwaypoint = 0;
-    private bool m_checkDistance = false;
     public Transform[] AIWaypoints;
     public GameObject[] Wheels;
     public float MaxSpeed = 10f;
     private int m_participantIndex = -1;
     private bool m_isFinishing;
-
-    private bool m_raceHasBegun;
+    private bool m_hasSetInitialDestination;
+    private ObstacleSound m_obstacleSound;
 
     private void Awake()
     {
-        AIWaypoints[0] = GameObject.FindGameObjectWithTag("AIWaypoint1").transform;
-        AIWaypoints[1] = GameObject.FindGameObjectWithTag("AIWaypoint2").transform;
-        AIWaypoints[2] = GameObject.FindGameObjectWithTag("AIWaypoint3").transform;
-    }
-    void Start(){
         m_agent = GetComponent<NavMeshAgent>();
+        m_obstacleSound = GetComponent<ObstacleSound>();
+
+        if (m_agent != null)
+        {
+            m_agent.autoBraking = false;
+            if (m_agent.stoppingDistance > 0.05f)
+            {
+                m_agent.stoppingDistance = 0.05f;
+            }
+        }
+
+        ResolveWaypoints();
+    }
+
+    void Start(){
+        if (!HasValidWaypoints())
+        {
+            ResolveWaypoints();
+        }
+
         m_participantIndex = ResolveParticipantIndex(transform);
         if (m_participantIndex >= 0)
         {
             SaveProgress.RegisterParticipant(m_participantIndex, transform);
         }
-        m_checkDistance = false;
     }
+
     void Update(){
         if (m_isFinishing || SaveProgress.RaCeHasFiniShed)
         {
@@ -39,62 +56,126 @@ public class AIKartControl : MonoBehaviour
 
         if (!SaveProgress.RaceHasStarted)
         {
+            m_currentwaypoint = 0;
+            m_hasSetInitialDestination = false;
             return;
         }
 
-        if (AIWaypoints == null || AIWaypoints.Length == 0)
+        if (m_agent == null || !HasValidWaypoints())
         {
             return;
         }
 
-        if (!m_raceHasBegun)
+        if (!m_hasSetInitialDestination)
         {
-            StartCoroutine(SetCheckDistance());
-            m_raceHasBegun = true;
+            SetCurrentWaypointDestination();
         }
-        if (m_raceHasBegun)
+        else if (ShouldAdvanceToNextTarget())
         {
-            m_agent.SetDestination(AIWaypoints[m_currentwaypoint].position);
-            CheckDistanceToNextTarget();
-            Rotatewheels();
-            if (GetComponent<ObstacleSound>().AIisHit == false)
-            {
-                ChangeSpeed();
-            }
+            m_currentwaypoint = (m_currentwaypoint + 1) % WaypointCount;
+            SetCurrentWaypointDestination();
+        }
+
+        Rotatewheels();
+        if (m_obstacleSound != null && m_obstacleSound.AIisHit == false)
+        {
+            ChangeSpeed();
         }
     }
 
-    private void CheckDistanceToNextTarget(){
-        if (AIWaypoints == null || AIWaypoints.Length == 0)
+    private bool ShouldAdvanceToNextTarget()
+    {
+        if (!HasValidWaypoints() || m_agent == null)
         {
-            return;
+            return false;
         }
 
         if (m_agent.pathPending)
         {
+            return false;
+        }
+
+        Transform currentWaypoint = AIWaypoints[m_currentwaypoint];
+        if (currentWaypoint == null)
+        {
+            return false;
+        }
+
+        float distanceToWaypoint = Vector3.Distance(transform.position, currentWaypoint.position);
+        return distanceToWaypoint <= WaypointAdvanceDistance;
+    }
+
+    private void SetCurrentWaypointDestination()
+    {
+        if (!HasValidWaypoints() || m_agent == null)
+        {
             return;
         }
 
-        if (m_agent.remainingDistance <= m_agent.stoppingDistance + 0.1f && m_checkDistance){
-            if (m_currentwaypoint < AIWaypoints.Length-1){
-                m_currentwaypoint++;
-            }else{
-                m_currentwaypoint =0;
-            }
-            m_checkDistance =false;
-            StartCoroutine(SetCheckDistance());
+        Transform destinationWaypoint = AIWaypoints[m_currentwaypoint];
+        if (destinationWaypoint == null)
+        {
+            return;
         }
+
+        m_agent.isStopped = false;
+        m_agent.SetDestination(destinationWaypoint.position);
+        m_hasSetInitialDestination = true;
+    }
+
+    private void ResolveWaypoints()
+    {
+        if (AIWaypoints == null || AIWaypoints.Length != WaypointCount)
+        {
+            AIWaypoints = new Transform[WaypointCount];
+        }
+
+        Transform waypointRoot = FindWaypointRoot();
+        if (waypointRoot == null || waypointRoot.childCount < WaypointCount)
+        {
+            return;
+        }
+
+        for (int i = 0; i < WaypointCount; i++)
+        {
+            AIWaypoints[i] = waypointRoot.GetChild(i);
+        }
+
+        m_currentwaypoint = 0;
+        m_hasSetInitialDestination = false;
+    }
+
+    private Transform FindWaypointRoot()
+    {
+        GameObject waypointRoot = GameObject.Find(WaypointRootName);
+        if (waypointRoot != null)
+        {
+            return waypointRoot.transform;
+        }
+
+        waypointRoot = GameObject.Find("AI1Waypoints");
+        if (waypointRoot != null)
+        {
+            return waypointRoot.transform;
+        }
+
+        return null;
+    }
+
+    private bool HasValidWaypoints()
+    {
+        return AIWaypoints != null
+            && AIWaypoints.Length >= WaypointCount
+            && AIWaypoints[0] != null
+            && AIWaypoints[1] != null
+            && AIWaypoints[2] != null
+            && AIWaypoints[3] != null;
     }
 
     private void Rotatewheels(){
         for (int i=0;i<Wheels.Length;i++){
             Wheels[i].transform.Rotate(-10, 0, 0);
         }
-    }
-
-    private IEnumerator SetCheckDistance(){
-        yield return new WaitForSeconds(1.0f);
-        m_checkDistance = true;
     }
 
     private void OnDestroy()

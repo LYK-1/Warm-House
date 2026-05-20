@@ -951,6 +951,11 @@ public class PlayerCartControl : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
+        if (IsPropContact(collision.collider))
+        {
+            return;
+        }
+
         MarkHazardContact(collision.collider);
         ApplyWallCollisionResponse(collision, true);
 
@@ -964,6 +969,11 @@ public class PlayerCartControl : MonoBehaviour
 
     private void OnCollisionStay(Collision collision)
     {
+        if (IsPropContact(collision.collider))
+        {
+            return;
+        }
+
         MarkHazardContact(collision.collider);
         ApplyWallCollisionResponse(collision, false);
 
@@ -990,6 +1000,11 @@ public class PlayerCartControl : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        if (IsPropContact(other))
+        {
+            return;
+        }
+
         MarkHazardContact(other);
 
         if (!CollisionDebugLogging || other == null)
@@ -1002,6 +1017,11 @@ public class PlayerCartControl : MonoBehaviour
 
     private void OnTriggerExit(Collider other)
     {
+        if (IsPropContact(other))
+        {
+            return;
+        }
+
         if (!CollisionDebugLogging || other == null)
         {
             return;
@@ -1121,7 +1141,7 @@ public class PlayerCartControl : MonoBehaviour
 
     private void MarkHazardContact(Collider other)
     {
-        if (other == null || IsSelfCollider(other) || other is TerrainCollider)
+        if (other == null || IsSelfCollider(other) || other is TerrainCollider || IsPropContact(other))
         {
             return;
         }
@@ -1333,6 +1353,27 @@ public class PlayerCartControl : MonoBehaviour
         if (other.attachedRigidbody != null && other.attachedRigidbody == m_Rigidbody)
         {
             return true;
+        }
+
+        return false;
+    }
+
+    private bool IsPropContact(Collider other)
+    {
+        if (other == null)
+        {
+            return false;
+        }
+
+        Transform cursor = other.transform;
+        while (cursor != null)
+        {
+            if (cursor.tag == "prop")
+            {
+                return true;
+            }
+
+            cursor = cursor.parent;
         }
 
         return false;

@@ -4,6 +4,8 @@ using static UnityEngine.UI.GridLayoutGroup;
 
 public class ProgressPoints : MonoBehaviour
 {
+    private const int FinishCheckpointTolerance = 1;
+
     public bool AISpeedControl = false;
     public float AISetSpeed;
     public float AIMaxSpeed = 45;
@@ -91,7 +93,7 @@ public class ProgressPoints : MonoBehaviour
             expectedNextCheckpoint = 1;
         }
 
-        if (currentCheckpoint == expectedNextCheckpoint)
+        if (StartLine && CanFinishRace(previousCheckpoint, checkpointCount))
         {
             if (player != null && player.m_reverse)
             {
@@ -104,16 +106,30 @@ public class ProgressPoints : MonoBehaviour
                 player.RegisterProgressRespawnPoint(transform);
             }
 
-            if (StartLine && previousCheckpoint == checkpointCount)
-            {
-                SaveProgress.CurrentLap[kartIndex] = Mathf.Min(SaveProgress.CurrentLap[kartIndex] + 1, SaveProgress.MaxLaps);
+            SaveProgress.CurrentLap[kartIndex] = Mathf.Min(SaveProgress.CurrentLap[kartIndex] + 1, SaveProgress.MaxLaps);
 
-                if (SaveProgress.CurrentLap[kartIndex] >= SaveProgress.MaxLaps)
-                {
-                    TriggerRaceFinish();
-                    SaveProgress.CurrentCheckpoint[kartIndex] = currentCheckpoint;
-                    return;
-                }
+            if (SaveProgress.CurrentLap[kartIndex] >= SaveProgress.MaxLaps)
+            {
+                TriggerRaceFinish();
+                SaveProgress.CurrentCheckpoint[kartIndex] = currentCheckpoint;
+                return;
+            }
+
+            SaveProgress.CurrentCheckpoint[kartIndex] = currentCheckpoint;
+            return;
+        }
+
+        if (currentCheckpoint == expectedNextCheckpoint)
+        {
+            if (player != null && player.m_reverse)
+            {
+                player.StopReverseAtProgressPoint();
+                return;
+            }
+
+            if (player != null)
+            {
+                player.RegisterProgressRespawnPoint(transform);
             }
 
             SaveProgress.CurrentCheckpoint[kartIndex] = currentCheckpoint;
@@ -138,6 +154,22 @@ public class ProgressPoints : MonoBehaviour
             // Wrong-way route: flip the car back to the forward direction.
             player.FaceForward();
         }
+    }
+
+    private bool CanFinishRace(int previousCheckpoint, int checkpointCount)
+    {
+        if (checkpointCount <= 0)
+        {
+            return false;
+        }
+
+        int finishThreshold = checkpointCount;
+        if (checkpointCount > 10)
+        {
+            finishThreshold = checkpointCount - FinishCheckpointTolerance;
+        }
+
+        return previousCheckpoint >= finishThreshold;
     }
 
     private int GetCheckpointCount(SaveProgress saveProgress)
