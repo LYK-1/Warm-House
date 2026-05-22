@@ -5,6 +5,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using Unity.Cinemachine;
 
+// 玩家赛车控制脚本，负责驾驶、漂移、复位、相机和比赛状态联动。
 public class PlayerCartControl : MonoBehaviour
 {
     private Rigidbody m_Rigidbody;
@@ -94,13 +95,17 @@ public class PlayerCartControl : MonoBehaviour
     public ICinemachineCamera CamB;
     public Canvas canvasObject;
 
+    // Awake：初始化组件和运行时状态。
     private void Awake()
     {
+        // 仅做最早期的相机切换预约，避免对象初始化顺序问题。
         Invoke("ChangeCameras", 0.05f);
     }
 
+    // Start：完成启动初始化。
     void Start()
     {
+        // 初始化刚体、重心、参赛者身份和出生时的安全保存点。
         m_Rigidbody = GetComponent<Rigidbody>();
         m_Rigidbody.centerOfMass = new Vector3(0f, -0.5f, 0f);
         m_Rigidbody.maxAngularVelocity = 5f;
@@ -124,8 +129,10 @@ public class PlayerCartControl : MonoBehaviour
         DisplayPosition();
     }
 
+    // FixedUpdate：执行物理帧更新。
     void FixedUpdate()
     {
+        // 只有比赛正式开始后，才允许车辆持续受物理驱动。
         if (isResetting)
         {
             return;
@@ -152,8 +159,10 @@ public class PlayerCartControl : MonoBehaviour
         TrackSafeRespawnPose();
     }
 
+    // Update：每帧更新主逻辑。
     void Update()
     {
+        // 每帧刷新当前速度和 HUD 显示。
         currentSpeed = m_Rigidbody.linearVelocity.magnitude * 3.6f;
 
         if (speedText != null)
@@ -167,8 +176,10 @@ public class PlayerCartControl : MonoBehaviour
         }
     }
 
+    // ChangeCameras：切换多人模式下的摄像机配置。
     void ChangeCameras()
     {
+        // 多人模式下切换相机和 HUD 布局，单人模式则保持默认。
         if (SaveScript.MultiPlayerMode)
         {
             CamA = ForwardCamera.GetComponent<CinemachineCamera>();
@@ -188,11 +199,13 @@ public class PlayerCartControl : MonoBehaviour
         }
     }
 
+    // IsTwoPlayerSplitScreen：判断状态是否满足条件。
     private bool IsTwoPlayerSplitScreen()
     {
         return SaveScript.MultiPlayerMode && SaveScript.MultiPlayerAmount == 2;
     }
 
+    // ResolveHudCanvas：解析并缓存相关引用。
     private Canvas ResolveHudCanvas()
     {
         if (canvasObject != null)
@@ -219,6 +232,7 @@ public class PlayerCartControl : MonoBehaviour
         return canvasObject;
     }
 
+    // ApplySplitScreenHudScaling：调整分屏模式下的 HUD 缩放。
     private void ApplySplitScreenHudScaling()
     {
         if (!IsTwoPlayerSplitScreen())
@@ -243,11 +257,13 @@ public class PlayerCartControl : MonoBehaviour
         scaler.matchWidthOrHeight = 0f;
     }
 
+    // IsPrimaryPlayer：判断状态是否满足条件。
     private bool IsPrimaryPlayer()
     {
         return GetParticipantIndex() == 0;
     }
 
+    // Drive：根据输入控制赛车行驶、转向和漂移。
     private void Drive(float acceleration, float brake, Vector2 steer, Vector2 drift)
     {
         if (m_Rigidbody.isKinematic)
@@ -255,6 +271,7 @@ public class PlayerCartControl : MonoBehaviour
             return;
         }
 
+        // 当前速度越高，转向越钝，漂移和刹车表现也会随之变化。
         float speed = m_Rigidbody.linearVelocity.magnitude;
 
         float speedFactor = Mathf.Clamp01(1f - (speed / MaxSpeed));
@@ -339,8 +356,10 @@ public class PlayerCartControl : MonoBehaviour
         }
     }
 
+    // ApplyDriftSpeedPenalty：应用漂移时的速度惩罚。
     private void ApplyDriftSpeedPenalty()
     {
+        // 漂移惩罚只影响水平速度，不影响赛车上下抖动。
         Vector3 planarVelocity = new Vector3(m_Rigidbody.linearVelocity.x, 0f, m_Rigidbody.linearVelocity.z);
         float planarSpeed = planarVelocity.magnitude;
 
@@ -362,8 +381,10 @@ public class PlayerCartControl : MonoBehaviour
         m_Rigidbody.linearVelocity = new Vector3(reducedPlanarVelocity.x, m_Rigidbody.linearVelocity.y, reducedPlanarVelocity.z);
     }
 
+    // AddDownForce：给赛车施加下压力。
     private void AddDownForce()
     {
+        // 只要任意轮子接地，就给赛车施加稳定下压力。
         bool anyGrounded = false;
 
         // All wheels count for grounding. Checking only the rear wheels caused
@@ -392,6 +413,7 @@ public class PlayerCartControl : MonoBehaviour
         }
     }
 
+    // SetConstraints：临时锁定赛车刚体约束。
     public IEnumerator SetConstraints()
     {
         yield return new WaitForSeconds(0.1f);
@@ -416,6 +438,7 @@ public class PlayerCartControl : MonoBehaviour
         constraintCoroutine = null;
     }
 
+    // OnAccelerate：响应加速输入。
     public void OnAccelerate(InputValue value)
     {
         if (!IsPrimaryPlayer())
@@ -432,6 +455,7 @@ public class PlayerCartControl : MonoBehaviour
         m_gas = value.isPressed ? 1f : 0f;
     }
 
+    // OnBrake：响应刹车输入。
     public void OnBrake(InputValue button)
     {
         if (!IsPrimaryPlayer())
@@ -463,6 +487,7 @@ public class PlayerCartControl : MonoBehaviour
         }
     }
 
+    // OnDrift：响应漂移输入。
     public void OnDrift(InputValue value)
     {
         if (!IsPrimaryPlayer())
@@ -479,6 +504,7 @@ public class PlayerCartControl : MonoBehaviour
         m_drift = value.Get<Vector2>();
     }
 
+    // OnReverse：响应倒车输入。
     public void OnReverse(InputValue button)
     {
         if (!IsPrimaryPlayer())
@@ -506,6 +532,7 @@ public class PlayerCartControl : MonoBehaviour
             GetComponent<KartSounds>().IsReversing = true;
         }
     }
+    // OnSteering：响应转向输入。
     public void OnSteering(InputValue value)
     {
         if (!IsPrimaryPlayer())
@@ -522,6 +549,7 @@ public class PlayerCartControl : MonoBehaviour
         m_steering = value.Get<Vector2>();
     }
 
+    // OnReset：响应重置输入。
     public void OnReset(InputValue button)
     {
         if (!IsPrimaryPlayer())
@@ -542,6 +570,7 @@ public class PlayerCartControl : MonoBehaviour
         StartCoroutine(ResetCar());
     }
 
+    // OnCameraChange：切换摄像机视角。
     public void OnCameraChange(InputValue button)
     {
         if (!IsPrimaryPlayer())
@@ -576,6 +605,7 @@ public class PlayerCartControl : MonoBehaviour
         }
     }
 
+    // SetForwardCameraActive：切换到前向摄像机。
     public void SetForwardCameraActive()
     {
         m_camReverse = false;
@@ -590,6 +620,7 @@ public class PlayerCartControl : MonoBehaviour
         }
     }
 
+    // SetReverseCameraActive：切换到倒车摄像机。
     public void SetReverseCameraActive()
     {
         m_camReverse = true;
@@ -604,6 +635,7 @@ public class PlayerCartControl : MonoBehaviour
         }
     }
 
+    // ResetCar：执行赛车复位流程。
     private IEnumerator ResetCar()
     {
         isResetting = true;
@@ -638,6 +670,7 @@ public class PlayerCartControl : MonoBehaviour
         m_steering = Vector2.zero;
         m_drift = Vector2.zero;
 
+        // 优先从最近一次安全点复活，实在找不到再回退到出生点。
         RespawnPose respawnPose;
         if (!TryGetSafeRespawnPose(out respawnPose))
         {
@@ -672,8 +705,10 @@ public class PlayerCartControl : MonoBehaviour
         isResetting = false;
     }
 
+    // BeginFinishSequence：开始比赛结束流程。
     public void BeginFinishSequence()
     {
+        // 比赛结束后先锁住赛车，避免终点动画还没播完就继续移动。
         if (m_Rigidbody == null || m_isFinishing)
         {
             return;
@@ -690,8 +725,10 @@ public class PlayerCartControl : MonoBehaviour
         m_finishCoroutine = StartCoroutine(FinishSequence());
     }
 
+    // FinishSequence：执行终点结算过渡。
     private IEnumerator FinishSequence()
     {
+        // 终点时先关闭所有输入，再把车速平滑压到 0。
         SaveProgress.RaceHasStarted = false;
 
         if (constraintCoroutine != null)
@@ -745,8 +782,10 @@ public class PlayerCartControl : MonoBehaviour
         m_finishCoroutine = null;
     }
 
+    // ZeroMotionForFinish：比赛结束时清空物理速度。
     private void ZeroMotionForFinish()
     {
+        // 比赛已经结束时，持续清空物理速度，防止赛车滑出镜头。
         if (m_Rigidbody == null)
         {
             return;
@@ -766,13 +805,16 @@ public class PlayerCartControl : MonoBehaviour
         }
     }
 
+    // RegisterProgressRespawnPoint：注册相关对象或状态。
     public void RegisterProgressRespawnPoint(Transform progressPoint)
     {
+        // 当前检查点会被记录为临时重生点，掉出赛道时可以回到这里。
         if (progressPoint == null)
         {
             return;
         }
 
+        // 生成新的重生点时，把它绑定到最近的检查点编号。
         int checkpointNumber = 0;
         ProgressPoints progressPointComponent = progressPoint.GetComponent<ProgressPoints>();
         if (progressPointComponent != null)
@@ -792,6 +834,7 @@ public class PlayerCartControl : MonoBehaviour
         RecordSafePose(new RespawnPose(progressPoint.position + Vector3.up * RespawnGroundLift, progressPose.Rotation, checkpointNumber), false);
     }
 
+    // ResolveNearestCheckpointIndex：查找最近的检查点索引。
     private int ResolveNearestCheckpointIndex(Vector3 position)
     {
         SaveProgress saveProgress = SaveProgress.Instance;
@@ -822,6 +865,7 @@ public class PlayerCartControl : MonoBehaviour
         return nearestIndex;
     }
 
+    // ResolveCheckpointForwardRotation：解析检查点正向朝向。
     private Quaternion ResolveCheckpointForwardRotation(int checkpointNumber, Quaternion fallbackRotation)
     {
         SaveProgress saveProgress = SaveProgress.Instance;
@@ -854,6 +898,7 @@ public class PlayerCartControl : MonoBehaviour
         return Quaternion.LookRotation(direction.normalized, Vector3.up);
     }
 
+    // ResolveTrackRespawnRotation：解析赛道重生朝向。
     private Quaternion ResolveTrackRespawnRotation(Transform progressPoint)
     {
         if (progressPoint != null)
@@ -885,6 +930,7 @@ public class PlayerCartControl : MonoBehaviour
         return progressPoint != null ? progressPoint.rotation : transform.rotation;
     }
 
+    // ResolveTrackRespawnRotation：解析赛道重生朝向。
     private Quaternion ResolveTrackRespawnRotation(Vector3 position)
     {
         SaveProgress saveProgress = SaveProgress.Instance;
@@ -916,6 +962,7 @@ public class PlayerCartControl : MonoBehaviour
         return Quaternion.LookRotation(direction.normalized, Vector3.up);
     }
 
+    // SetGears：根据速度刷新挡位。
     public void SetGears()
     {
         if (currentSpeed < 25f)
@@ -949,6 +996,7 @@ public class PlayerCartControl : MonoBehaviour
         }
     }
 
+    // OnCollisionEnter：处理碰撞进入事件。
     private void OnCollisionEnter(Collision collision)
     {
         if (IsPropContact(collision.collider))
@@ -967,6 +1015,7 @@ public class PlayerCartControl : MonoBehaviour
         LogCollision("OnCollisionEnter", collision);
     }
 
+    // OnCollisionStay：处理碰撞持续事件。
     private void OnCollisionStay(Collision collision)
     {
         if (IsPropContact(collision.collider))
@@ -990,6 +1039,7 @@ public class PlayerCartControl : MonoBehaviour
         LogCollision("OnCollisionStay", collision);
     }
 
+    // OnCollisionExit：处理碰撞离开事件。
     private void OnCollisionExit(Collision collision)
     {
         if (collision.collider == m_lastCollisionStayCollider)
@@ -998,6 +1048,7 @@ public class PlayerCartControl : MonoBehaviour
         }
     }
 
+    // OnTriggerEnter：处理触发器进入事件。
     private void OnTriggerEnter(Collider other)
     {
         if (IsPropContact(other))
@@ -1015,6 +1066,7 @@ public class PlayerCartControl : MonoBehaviour
         LogTrigger("OnTriggerEnter", other);
     }
 
+    // OnTriggerExit：处理触发器离开事件。
     private void OnTriggerExit(Collider other)
     {
         if (IsPropContact(other))
@@ -1030,6 +1082,7 @@ public class PlayerCartControl : MonoBehaviour
         LogTrigger("OnTriggerExit", other);
     }
 
+    // ShouldLogCollisionStay：判断是否满足执行条件。
     private bool ShouldLogCollisionStay(Collider other)
     {
         float now = Time.unscaledTime;
@@ -1043,6 +1096,7 @@ public class PlayerCartControl : MonoBehaviour
         return false;
     }
 
+    // ApplyWallCollisionResponse：计算墙体碰撞后的反弹响应。
     private void ApplyWallCollisionResponse(Collision collision, bool applyBounce)
     {
         if (m_Rigidbody == null || collision == null || collision.collider == null)
@@ -1090,6 +1144,7 @@ public class PlayerCartControl : MonoBehaviour
         m_Rigidbody.angularVelocity = angularVelocity;
     }
 
+    // IsWallLikeCollider：判断碰撞体是否属于墙体。
     private bool IsWallLikeCollider(Collider other)
     {
         if (other == null)
@@ -1106,6 +1161,7 @@ public class PlayerCartControl : MonoBehaviour
         return other.name.Contains("Blocker") || other.name.Contains("Fence");
     }
 
+    // LogCollision：输出碰撞调试日志。
     private void LogCollision(string eventName, Collision collision)
     {
         ContactPoint contact = default;
@@ -1129,6 +1185,7 @@ public class PlayerCartControl : MonoBehaviour
         // Debug.Log(message, collision.collider != null ? collision.collider.gameObject : gameObject);
     }
 
+    // LogTrigger：输出触发器调试日志。
     private void LogTrigger(string eventName, Collider other)
     {
         Vector3 closestPoint = other != null ? other.bounds.ClosestPoint(transform.position) : transform.position;
@@ -1139,6 +1196,7 @@ public class PlayerCartControl : MonoBehaviour
         // Debug.Log(message, other.gameObject);
     }
 
+    // MarkHazardContact：记录最近一次危险接触时间。
     private void MarkHazardContact(Collider other)
     {
         if (other == null || IsSelfCollider(other) || other is TerrainCollider || IsPropContact(other))
@@ -1149,6 +1207,7 @@ public class PlayerCartControl : MonoBehaviour
         m_lastHazardContactTime = Time.time;
     }
 
+    // TrackSafeRespawnPose：记录当前安全重生点。
     private void TrackSafeRespawnPose()
     {
         if (!m_grounded || isResetting || m_changeDirection || m_reverse)
@@ -1196,17 +1255,21 @@ public class PlayerCartControl : MonoBehaviour
         RecordSafePose(groundedPose, false);
     }
 
+    // CreateRespawnPose：创建一条重生姿态数据。
     private RespawnPose CreateRespawnPose(Vector3 position, Quaternion rotation)
     {
         return CreateRespawnPose(position, rotation, 0);
     }
 
+    // CreateRespawnPose：创建一条重生姿态数据。
     private RespawnPose CreateRespawnPose(Vector3 position, Quaternion rotation, int checkpointNumber)
     {
+        // 只保留 Y 轴朝向，避免重生时赛车发生奇怪翻转。
         Vector3 euler = rotation.eulerAngles;
         return new RespawnPose(position, Quaternion.Euler(0f, euler.y, 0f), checkpointNumber);
     }
 
+    // GetCurrentCheckpointNumber：获取相关数据或对象。
     private int GetCurrentCheckpointNumber()
     {
         int participantIndex = GetParticipantIndex();
@@ -1218,8 +1281,10 @@ public class PlayerCartControl : MonoBehaviour
         return Mathf.Max(0, SaveProgress.CurrentCheckpoint[participantIndex]);
     }
 
+    // RecordSafePose：记录一条安全姿态。
     private void RecordSafePose(RespawnPose pose, bool force)
     {
+        // 记录安全姿态时会去重，避免每一帧都塞进历史列表。
         if (!force && m_safeRespawnHistory.Count > 0)
         {
             float distance = Vector3.Distance(pose.Position, m_lastSafePosePosition);
@@ -1241,6 +1306,7 @@ public class PlayerCartControl : MonoBehaviour
         m_lastSafePoseRotation = pose.Rotation;
     }
 
+    // IsRespawnPoseTooCloseToCurrent：判断重生点是否离当前位置过近。
     private bool IsRespawnPoseTooCloseToCurrent(RespawnPose pose, Vector3 currentPosition)
     {
         if (RespawnMinDistanceFromCurrent <= 0f)
@@ -1252,6 +1318,7 @@ public class PlayerCartControl : MonoBehaviour
         return (pose.Position - currentPosition).sqrMagnitude < minDistanceSqr;
     }
 
+    // TryGetSafeRespawnPose：尝试获取可用的安全重生点。
     private bool TryGetSafeRespawnPose(out RespawnPose pose)
     {
         Vector3 currentPosition = m_Rigidbody != null ? m_Rigidbody.position : transform.position;
@@ -1286,8 +1353,10 @@ public class PlayerCartControl : MonoBehaviour
         return true;
     }
 
+    // TryProjectRespawnToGround：把重生点投射到地面。
     private bool TryProjectRespawnToGround(RespawnPose pose, out RespawnPose groundedPose)
     {
+        // 通过射线检测地面，把重生点贴到可行驶地面上。
         Vector3 rayOrigin = pose.Position + Vector3.up * RespawnGroundProbeHeight;
         RaycastHit hit;
 
@@ -1310,8 +1379,10 @@ public class PlayerCartControl : MonoBehaviour
         return false;
     }
 
+    // IsRespawnPoseBlocked：判断重生位置是否被阻挡。
     private bool IsRespawnPoseBlocked(Vector3 position)
     {
+        // 用胶囊体范围检查当前位置是否被墙体、车体或障碍物占住。
         Vector3 capsuleBottom = position + Vector3.up * 0.4f;
         Vector3 capsuleTop = position + Vector3.up * (0.4f + RespawnVehicleCheckHeight);
         Collider[] overlaps = Physics.OverlapCapsule(
@@ -1343,6 +1414,7 @@ public class PlayerCartControl : MonoBehaviour
         return false;
     }
 
+    // IsSelfCollider：判断状态是否满足条件。
     private bool IsSelfCollider(Collider other)
     {
         if (other.transform.IsChildOf(transform))
@@ -1358,6 +1430,7 @@ public class PlayerCartControl : MonoBehaviour
         return false;
     }
 
+    // IsPropContact：判断状态是否满足条件。
     private bool IsPropContact(Collider other)
     {
         if (other == null)
@@ -1379,6 +1452,7 @@ public class PlayerCartControl : MonoBehaviour
         return false;
     }
 
+    // DescribeCollider：生成碰撞体的描述字符串。
     private string DescribeCollider(Collider collider)
     {
         if (collider == null)
@@ -1399,6 +1473,7 @@ public class PlayerCartControl : MonoBehaviour
             $"type={collider.GetType().Name} path='{GetHierarchyPath(collider.transform)}' rigidbody='{rigidbodyName}'";
     }
 
+    // GetHierarchyPath：获取对象层级路径。
     private string GetHierarchyPath(Transform current)
     {
         if (current == null)
@@ -1435,6 +1510,7 @@ public class PlayerCartControl : MonoBehaviour
         }
     }
 
+    // DisplayPosition：刷新排名显示。
     private void DisplayPosition()
     {
         if (PositionDisplay == null)
@@ -1442,9 +1518,11 @@ public class PlayerCartControl : MonoBehaviour
             return;
         }
 
+        // HUD 左上角/右下角的名次显示只需要展示当前本地玩家的排名。
         PositionDisplay.text = BuildRankText(GetParticipantIndex());
     }
 
+    // ConfigureLeaderboardDisplay：配置名次文本的显示样式。
     private void ConfigureLeaderboardDisplay()
     {
         if (PositionDisplay == null)
@@ -1452,11 +1530,13 @@ public class PlayerCartControl : MonoBehaviour
             return;
         }
 
+        // 右下角对齐，保证多行名次文本不会挤到速度表区域。
         PositionDisplay.alignment = TextAnchor.LowerRight;
         PositionDisplay.horizontalOverflow = HorizontalWrapMode.Overflow;
         PositionDisplay.verticalOverflow = VerticalWrapMode.Overflow;
     }
 
+    // BuildRankText：构建排名显示文本。
     private string BuildRankText(int localParticipantIndex)
     {
         if (!SaveProgress.RaceHasStarted && !SaveProgress.RaCeHasFiniShed)
@@ -1473,6 +1553,7 @@ public class PlayerCartControl : MonoBehaviour
         return $"Rank: {rank}";
     }
 
+    // GetParticipantIndex：获取当前脚本所属的参赛者编号。
     private int GetParticipantIndex()
     {
         if (m_participantIndex >= 0 && m_participantIndex < SaveProgress.ParticipantTags.Length)
@@ -1490,6 +1571,7 @@ public class PlayerCartControl : MonoBehaviour
         get { return GetParticipantIndex(); }
     }
 
+    // ResolveParticipantIndex：解析参赛者的槽位编号。
     public static int ResolveParticipantIndex(Transform current)
     {
         if (current == null)
@@ -1536,6 +1618,7 @@ public class PlayerCartControl : MonoBehaviour
         return -1;
     }
 
+    // GetProgressPoint：获取指定序号的检查点对象。
     private ProgressPoints GetProgressPoint(int index)
     {
         SaveProgress saveProgress = SaveProgress.Instance;
@@ -1558,8 +1641,10 @@ public class PlayerCartControl : MonoBehaviour
         return pointObject.GetComponent<ProgressPoints>();
     }
 
+    // FaceForward：把赛车朝向修正为正向。
     public void FaceForward()
     {
+        // 正在回正或刚体不存在时，不允许再次触发回正逻辑。
         if (m_changeDirection || m_Rigidbody == null)
         {
             return;
@@ -1593,8 +1678,10 @@ public class PlayerCartControl : MonoBehaviour
         StartCoroutine(ResetChangeDirection());
     }
 
+    // StopReverseAtProgressPoint：在检查点处��止倒车并回正。
     public void StopReverseAtProgressPoint()
     {
+        // 逆行时一旦碰到有效检查点，就只做回正，不让玩家借此反复刷检查点。
         if (m_changeDirection || m_Rigidbody == null)
         {
             return;
@@ -1627,8 +1714,10 @@ public class PlayerCartControl : MonoBehaviour
         StartCoroutine(ResetChangeDirection());
     }
 
+    // ResetChangeDirection：等待回正流程结束并恢复物理控制。
     IEnumerator ResetChangeDirection()
     {
+        // 回正过程先等待一小段时间，再重新开放物理控制。
         yield return new WaitForSeconds(1f);
 
         if (m_Rigidbody != null)
@@ -1636,12 +1725,15 @@ public class PlayerCartControl : MonoBehaviour
             m_Rigidbody.isKinematic = false;
         }
 
+        // 再等半秒后解除方向锁，防止连续触发抖动。
         yield return new WaitForSeconds(0.5f);
         m_changeDirection = false;
     }
 
+    // DisplayLap：刷新圈数显示。
     public void DisplayLap()
     {
+        // 圈数显示始终跟随当前参赛者的实时进度更新。
         if (LapDisplay == null)
         {
             return;
@@ -1660,12 +1752,15 @@ public class PlayerCartControl : MonoBehaviour
             return;
         }
 
+        // 圈数显示采用“当前圈 + 1”的方式，让 UI 更符合玩家直觉。
         int lapAmount = Mathf.Min(Mathf.Max(0, SaveProgress.CurrentLap[participantIndex]) + 1, SaveProgress.MaxLaps);
         LapDisplay.text = "Lap " + lapAmount.ToString();
     }
 
+    // RegisterParticipantState：注册当前参赛者状态。
     private void RegisterParticipantState()
     {
+        // 进入场景后把本车注册到比赛管理器，供排名和结算读取。
         int participantIndex = m_participantIndex;
         if (participantIndex < 0 || participantIndex >= SaveProgress.ParticipantTransforms.Length)
         {
@@ -1675,8 +1770,10 @@ public class PlayerCartControl : MonoBehaviour
         SaveProgress.RegisterParticipant(participantIndex, transform);
     }
 
+    // OnDestroy：清理引用并释放注册。
     private void OnDestroy()
     {
+        // 对象销毁时取消注册，防止跨场景引用失效。
         if (m_participantIndex >= 0)
         {
             SaveProgress.UnregisterParticipant(m_participantIndex, transform);
